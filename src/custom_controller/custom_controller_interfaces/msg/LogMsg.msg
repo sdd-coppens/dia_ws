@@ -1,0 +1,9 @@
+float32 curr_pos_x
+float32 curr_pos_y
+float32 curr_pos_z
+float32 input_x
+float32 input_y
+float32 input_z
+float32 control_sig_x
+float32 control_sig_y
+float32 control_sig_z
