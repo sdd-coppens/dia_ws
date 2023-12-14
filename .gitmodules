@@ -1,0 +1,8 @@
+[submodule "src/network_domain"]
+        path = src/network/lib/network_domain
+        url = git@github.com:DIA-for-TI/NetworkDomain.git
+        branch = main
+[submodule "src/xarm_ros2"]
+        path = src/xarm_ros2
+        url = git@github.com:xArm-Developer/xarm_ros2.git
+        branch = main
