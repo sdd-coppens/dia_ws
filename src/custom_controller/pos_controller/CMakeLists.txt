@@ -37,6 +37,8 @@ ament_target_dependencies(new_novint rclcpp xarm_sdk std_msgs geometry_msgs cust
 
 add_executable(operator_domain_manip src/operator_domain_manip.cpp)
 ament_target_dependencies(operator_domain_manip rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs)
+add_executable(experiment_pose_seq src/experiment_pose_seq.cpp)
+ament_target_dependencies(experiment_pose_seq rclcpp xarm_sdk std_msgs geometry_msgs custom_controller_interfaces tf2 tf2_ros)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -48,6 +50,7 @@ install(TARGETS
   keyboard
   new_novint
   operator_domain_manip
+  experiment_pose_seq
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
