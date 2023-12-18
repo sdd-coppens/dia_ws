@@ -3,3 +3,4 @@
 install
 build
 *.csv
+.vscode

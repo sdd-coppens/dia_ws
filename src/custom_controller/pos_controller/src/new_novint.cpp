@@ -84,7 +84,7 @@ public:
         sleep_milliseconds(100);
 
         prev_error = {0.f, 0.f, 0.f};
-        object_orientation = {0.f, 0.f, 0.f};
+        object_pos_or = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
 
         // Set reduced mode to limit max speed (note: this broke somehow and immediately causes an overspeed error).
         arm->set_reduced_max_joint_speed(100);
@@ -121,11 +121,13 @@ private:
     fp32 z_offset_;
     fp32 z_scaling_;
 
-    std::array<fp32, 3> object_orientation;
+    std::array<fp32, 6> object_pos_or;
 
     std::array<fp32, 3> prev_error;
     bool use_pd_;
     bool first_callback_;
+    bool use_geofencing_;
+    bool turn_attachment_;
     XArmAPI *arm;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_keyboard_;
@@ -177,15 +179,23 @@ private:
         tf2::Matrix3x3 m(q);
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
-        // std::cout << "roll: " << roll * 180.f / M_PI << " pitch: " << pitch * 180.f / M_PI << " yaw: " << yaw * 180.f / M_PI << std::endl;
+        
+        std::cout << "x: " << object_pos_or[0] << " y: " << object_pos_or[1] << " z: " << object_pos_or[2] << " r: " << object_pos_or[3] << " p: " << object_pos_or[4] << " y: " << object_pos_or[5] << std::endl;
 
-        object_orientation[0] = roll * 180.f / M_PI;
-        object_orientation[1] = pitch * 180.f / M_PI;
-        object_orientation[2] = yaw * 180.f / M_PI;
+        object_pos_or[0] = msg->pose.position.y * x_scaling_;
+        object_pos_or[1] = msg->pose.position.x * y_scaling_;
+        object_pos_or[2] = msg->pose.position.z * z_scaling_;
+        object_pos_or[3] = roll * 180.f / M_PI;
+        object_pos_or[4] = pitch * 180.f / M_PI;
+        object_pos_or[5] = yaw * 180.f / M_PI;
     }
 
     std::array<fp32, 6> compute_input(std::array<double, 3> novint_input) {
-        return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_offset_ + novint_input[2] * z_scaling_, 180.f + object_orientation[1], 0.f + object_orientation[0], 0.f};
+        if (turn_attachment_) {
+            return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_offset_ + novint_input[2] * z_scaling_, 180.f + object_pos_or[1], 0.f + object_pos_or[0], 0.f};
+        } else {
+            return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_offset_ + novint_input[2] * z_scaling_, 180.f, 0.f, 0.f};
+        }
     }
 
     void topic_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
@@ -243,11 +253,11 @@ private:
         rclcpp::Time time_stamp = this->now();
 
         // Set arm position at 250Hz.
-        int ret = arm->set_servo_cartesian(poses, 1);
+        // int ret = arm->set_servo_cartesian(poses, 1);
         sleep_milliseconds(4);
-        if (ret != 0 && ret != 1) {
-            printf("set_servo_cartesian, ret=%d\n", ret);
-        }
+        // if (ret != 0 && ret != 1) {
+            // printf("set_servo_cartesian, ret=%d\n", ret);
+        // }
     }
 };
 
