@@ -19,6 +19,9 @@ class JogController : public rclcpp::Node
 public:
     JogController() : Node("jog_controller")
     {
+        whiteboard_l = 1.0;
+        whiteboard_w = 1.0;
+
         // Get ROS2 parameters and set defaults.
         declare_parameter("use_pd", true);
         declare_parameter("k_p", 0.25f);
@@ -111,6 +114,9 @@ public:
     }
 
 private:
+    fp32 whiteboard_l;
+    fp32 whiteboard_w;
+
     std::ofstream log_file;
     fp32 k_p_;
     fp32 k_d_;
@@ -180,7 +186,20 @@ private:
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
         
-        std::cout << "x: " << object_pos_or[0] << " y: " << object_pos_or[1] << " z: " << object_pos_or[2] << " r: " << object_pos_or[3] << " p: " << object_pos_or[4] << " y: " << object_pos_or[5] << std::endl;
+
+        tf2::Vector3 v_test(whiteboard_l / 2.f, whiteboard_w / 2.f, 0.f);
+        tf2::Vector3 v_test_new = tf2::quatRotate(q, v_test);
+        std::cout << "(x0, y0, z0): (" << whiteboard_l / 2.f << "," << whiteboard_w / 2.f << "," << 0.f << ")" << std::endl;
+        std::cout << "rotated: (x0, y0, z0): (" << v_test_new[0] << "," << v_test_new[1] << "," << v_test_new[2] << ")" << std::endl;
+
+
+        // std::cout << "x: " << object_pos_or[0] << " y: " << object_pos_or[1] << " z: " << object_pos_or[2] << " r: " << object_pos_or[3] << " p: " << object_pos_or[4] << " y: " << object_pos_or[5] << std::endl;
+        
+        // std::cout << "(x0, y0, z0): (" << whiteboard_l / 2.f << "," << whiteboard_w / 2.f << "," << 0.f << ")" << std::endl;
+        // std::cout << "(x1, y1, z1): (" << whiteboard_l / 2.f << "," << - whiteboard_w / 2.f << "," << 0.f << ")" << std::endl;
+        // std::cout << "(x2, y2, z2): (" << - whiteboard_l / 2.f << "," << whiteboard_w / 2.f << "," << 0.f << ")" << std::endl;
+        // std::cout << "(x3, y3, z3): (" << - whiteboard_l / 2.f << "," << - whiteboard_w / 2.f << "," << 0.f << ")" << std::endl;
+
 
         object_pos_or[0] = msg->pose.position.y * x_scaling_;
         object_pos_or[1] = msg->pose.position.x * y_scaling_;
