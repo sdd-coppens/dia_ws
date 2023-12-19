@@ -113,6 +113,7 @@ class WifiCommunicator{
 
         int receiveSensorOutputFromArduino(SensorOutput& sensorOutput){
             if(receiveMessageFromArduino(this->sensorOutputBuffer, 28)){
+                std::cout<<sizeof(sensorOutputBuffer)<<"\n";
                 return 0;
             }
 

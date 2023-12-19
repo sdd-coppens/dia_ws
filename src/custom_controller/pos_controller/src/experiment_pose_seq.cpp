@@ -30,7 +30,6 @@ public:
         // Open csv logging.
         log_file.open("log_file.csv");
         log_file << "timestamp (ms)" << "," << "curr_pos_x" << "," << "curr_pos_y" << "," << "curr_pos_z" << "," <<"curr_rot_r"<<  "," <<"curr_rot_p"<< "," <<"curr_rot_y"<<"\n";
-
       
         std::string port = "192.168.1.171";
 
@@ -52,13 +51,12 @@ public:
         arm->set_state(0);
         sleep_milliseconds(100);
 
-
         // Set reduced mode to limit max speed (note: this broke somehow and immediately causes an overspeed error).
         arm->set_reduced_max_joint_speed(100);
         arm->set_reduced_mode(true);
         arm->set_reduced_mode(false);
         sleep_milliseconds(100);
-        x = 121;
+        x = -134.9999;
         incr = 0.5;
         change = 0;
 
@@ -66,7 +64,7 @@ public:
 
         arm->set_mode(0);
         arm->set_state(0);
-        std::array<fp32, 6> first_input = {121,0,170,180,0,0};
+        std::array<fp32, 6> first_input = {290,0,240,180,0,-135};
         fp32 first_pose[6];
         std::copy(first_input.begin(), first_input.end(), first_pose);
         arm->set_position(first_pose, true);
@@ -105,14 +103,20 @@ private:
     {   if(change == 4){return;}
         fp32* curr_pos = static_cast<fp32*>(malloc(6 * sizeof(fp32)));
         arm->get_position(curr_pos);
-        if (x > 350 || x <= 120) {
+        if (x > 135 || x <= -135) {
             incr *= -1;
+            // x *=-1;
             change++;
         }
+        // if (x > 180) {
+        //     // incr *= -1;
+        //     x *=-1;
+        //     change++;
+        // }
         x += incr;
         // Logging to csv.
         rclcpp::Time time_stamp = this->now();
-        fp32 poses[6] = {x,0,170,180,0,0};
+        fp32 poses[6] = {290, 0, 240, 180, 0, x};
         // Set arm position at 250Hz. 
         log_file <<time_stamp.nanoseconds()/1000 << "," << curr_pos[0] << ","<< curr_pos[1] << "," << curr_pos[2]<<","<< curr_pos[3]<<","<< curr_pos[4]<<","<< curr_pos[5]<<"\n"; //  r-p-y
         int ret = arm->set_servo_cartesian(poses, 1);

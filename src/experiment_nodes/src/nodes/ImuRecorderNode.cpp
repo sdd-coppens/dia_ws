@@ -20,7 +20,7 @@ ImuRecorderNode::ImuRecorderNode() : Node("imu_recorder")
 
 ImuRecorderNode::~ImuRecorderNode()
 {
-    this->joinImuRecorderThread();
+    this->recorderThread.join();
 }
 
 void ImuRecorderNode::startImuRecorderThread(){
@@ -31,24 +31,20 @@ void ImuRecorderNode::startImuRecorderThread(){
         std::ofstream imuDataRecording;
         imuDataRecording.open ("imuData.csv");
 
-        for (int i = 0; i < 10; i++) {
-            // sleep_milliseconds(10);
-                using namespace std::chrono_literals;
-            std::this_thread::sleep_for(100ms);
-            // printf("big sending hours\n");
-            wifi.sendMessageToArduino("Start"); // Send out the start signal to
-        }
+
+        wifi.sendMessageToArduino("Start"); // Send out the start signal to
 
         while(!this->recordFlag.load()){
-            // printf("not working");
+
+            wifi.receiveSensorOutputFromArduino(sensorOutput); // Receive but discard the incoming data. (not doing this caused a gap in the data.)
+
         }
+        
+        std::cout<<"Recording Started!\n";
 
         while (this->recordFlag.load()&&rclcpp::ok()) {
-            // printf("received: %i\n", packet_received);
-            // packet_received++;
-            // printf("working");
+
             wifi.receiveSensorOutputFromArduino(sensorOutput); // This is a blocking receive.
-            sensorOutput.printData();
             imuDataRecording<<sensorOutput.accX<<","<<sensorOutput.accY<<","<<sensorOutput.accZ<<","<<sensorOutput.gyroX<<","
                             <<sensorOutput.gyroY<<","<<sensorOutput.gyroZ<<","<<sensorOutput.timestamp<<"\n";
         }
@@ -67,6 +63,36 @@ void ImuRecorderNode::sync_callback(const std_msgs::msg::String::SharedPtr msg) 
     }
 }
 
-void ImuRecorderNode::joinImuRecorderThread(){
-    this->recorderThread.join();
-}
+
+// void CameraRecorderNode::startSaveThread(){
+        
+
+
+//     saveThread = std::thread([this]() {
+//         int frameNumber = 0;
+//         std::string folderPath = "./captured_frames/"; // folder where images will be saved
+
+//         while (true) {
+//             std::unique_lock<std::mutex> lock(this->FrameMutex);
+//             this->frameQueueCondition.wait(lock, [this] { return !this->frameQueue.empty() || this->captureDone; });
+
+//             while (!this->frameQueue.empty()) {
+//                 cv::Mat frame = this->frameQueue.front();
+//                 this->frameQueue.pop();
+//                 lock.unlock();
+
+//                 std::string filename = folderPath + "frame_" + std::to_string(frameNumber++) + ".png";
+//                 if (!cv::imwrite(filename, frame)) {
+//                     std::cerr << "ERROR: Could not save image " << filename << std::endl;
+//                 }
+
+//                 lock.lock();
+//             }
+
+//             if (this->captureDone && this->frameQueue.empty()) {
+//                 break;
+//             }
+//         }
+//     });     
+// }  
+

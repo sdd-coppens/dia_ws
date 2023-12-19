@@ -48,6 +48,7 @@ ament_target_dependencies(imu_recorder rclcpp std_msgs)
 target_include_directories(camera_recorder PRIVATE src/nodes)
 target_include_directories(imu_recorder PRIVATE src/nodes)
 
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME}/)
 
 install(TARGETS
   camera_recorder

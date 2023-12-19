@@ -1,6 +1,6 @@
 {
     "WifiConfigs": {
-        "ArduinoIP":   "192.168.1.123",
+        "ArduinoIP":   "192.168.4.1",
         "ArduinoPort": 2390,
         "LocalIP":     "0.0.0.0",
         "LocalPort":   5500
