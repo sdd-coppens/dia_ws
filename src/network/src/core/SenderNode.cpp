@@ -79,6 +79,18 @@ void SenderNode::objectPoseCallback(const geometry_msgs::msg::PoseStamped& objec
     this->msgData.objects[0].orientation[1] = objectPoseMessage.pose.orientation.y;
     this->msgData.objects[0].orientation[2] = objectPoseMessage.pose.orientation.z;
     this->msgData.objects[0].orientation[3] = objectPoseMessage.pose.orientation.w;
+
+
+    // this->msgData.objects[0].orientation[0] = objectPoseMessage.pose.orientation.w;
+    // this->msgData.objects[0].orientation[1] = objectPoseMessage.pose.orientation.x;
+    // this->msgData.objects[0].orientation[2] = objectPoseMessage.pose.orientation.y;
+    // this->msgData.objects[0].orientation[3] = objectPoseMessage.pose.orientation.z;
+
+
+    // this->msgData.objects[0].orientation[0] = objectPoseMessage.pose.orientation.w;
+    // this->msgData.objects[0].orientation[1] = objectPoseMessage.pose.orientation.z;
+    // this->msgData.objects[0].orientation[2] = objectPoseMessage.pose.orientation.y;
+    // this->msgData.objects[0].orientation[3] = objectPoseMessage.pose.orientation.x;
     this->writeToConnection();
 }
 

@@ -29,7 +29,7 @@ public:
         get_parameter("z", z_);
         get_parameter("w", w_);
 
-        publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/object/pose", 10);
+        publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/spinning", 10);
         timer_ = this->create_wall_timer(4ms, std::bind(&MinimalPublisher::timer_callback, this));
 
         incr = 1;
@@ -39,32 +39,9 @@ public:
 private:
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
 
-    std::array<float, 4> normalize(float x_, float y_, float z_, float w_) {
-        double magnitude = std::sqrt(w_ * w_ + x_ * x_ + y_ * y_ + z_ * z_);
-
-        float x = x_;
-        float y = y_;
-        float z = z_;
-        float w = w_;
-
-        // Check if the quaternion is not close to zero before normalization
-        if (std::abs(magnitude) > 1e-8) {
-            w /= magnitude;
-            x /= magnitude;
-            y /= magnitude;
-            z /= magnitude;
-        }
-        // Handle the case where the quaternion is close to zero (to avoid division by zero)
-        else {
-            w = 1.0;
-            x = y = z = 0.0;
-        }
-        return {x, y, z, w};
-    }
-
     void timer_callback()
     {
-        if (x > 1000 || x <= -1000) {
+        if (x > 340 || x <= -340) {
             incr *= -1;
         }
         x += incr;
@@ -74,23 +51,16 @@ private:
         msg.header.stamp = this->get_clock()->now();
         // msg.pose.position.y = x / 4000.f;
         msg.pose.position.y = 0.f;
-        msg.pose.position.x = 0.f;
-        msg.pose.position.z = 0.f;
-        msg.pose.orientation.x = x_;
+        msg.pose.position.x = 0;
+        msg.pose.position.z = 0;
+        msg.pose.orientation.x = x;
         // msg.pose.orientation.y = x / 8000.f;
-        // msg.pose.orientation.y = 2000 / 8000.f;
-        msg.pose.orientation.y = y_;
+        msg.pose.orientation.y = 300 / 8000.f;
+        // msg.pose.orientation.y = y_;
         msg.pose.orientation.z = z_;
         // msg.pose.orientation.w = x / 8000.f;
-        // msg.pose.orientation.w = 2000 / 8000.f;
-        msg.pose.orientation.w = w_;
-
-        std::array<float, 4> normalized_quat = normalize(msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w);
-        msg.pose.orientation.x = normalized_quat[0];
-        msg.pose.orientation.y = normalized_quat[1];
-        msg.pose.orientation.z = normalized_quat[2];
-        msg.pose.orientation.w = normalized_quat[3];
-
+        msg.pose.orientation.w = 300 / 8000.f;
+        // msg.pose.orientation.w = w_;
         publisher_->publish(msg);
     }
     int incr;

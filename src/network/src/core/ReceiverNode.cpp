@@ -7,7 +7,8 @@ ReceiverNode::ReceiverNode(int srcPort, std::string dstIp, std::string dstPort):
     // Add the node's parameters
     this->declare_parameter("force_scale", 110.0);
     this->declare_parameter("max_force", 30.0);
-    this->declare_parameter("pos_scale", 1.0 / 5.3);
+    // this->declare_parameter("pos_scale", 1.0 / 5.3);
+    this->declare_parameter("pos_scale", 1.0);
 
     this->declare_parameter("src_port", srcPort);
     this->declare_parameter("dst_ip", dstIp);
@@ -126,9 +127,23 @@ geometry_msgs::msg::PoseStamped ReceiverNode::getPoseStamptedMessage(float x, fl
     // message.pose.position.x = -scalingFactor*x;
     // message.pose.position.y = scalingFactor*z;
     // message.pose.position.z = scalingFactor*y;
+
+
+
+    // Coordinate fuckery
     message.pose.position.x = scalingFactor*x;
-    message.pose.position.y = -scalingFactor*z;
-    message.pose.position.z = scalingFactor*y;
+    message.pose.position.y = scalingFactor*y;
+    message.pose.position.z = scalingFactor*z;
+
+
+    // message.pose.position.x = scalingFactor*x;
+    // message.pose.position.y = -scalingFactor*z;
+    // message.pose.position.z = scalingFactor*y;
+
+
+
+
+
     //TODO: Currently no need for rotation but will have to be added.   
     return message;
 }

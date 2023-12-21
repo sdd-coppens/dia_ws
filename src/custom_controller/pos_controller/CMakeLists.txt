@@ -38,6 +38,9 @@ ament_target_dependencies(new_novint rclcpp xarm_sdk std_msgs geometry_msgs cust
 add_executable(operator_domain_manip src/operator_domain_manip.cpp)
 ament_target_dependencies(operator_domain_manip rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs)
 
+add_executable(spinning src/spinning.cpp)
+ament_target_dependencies(spinning rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs)
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -48,6 +51,7 @@ install(TARGETS
   keyboard
   new_novint
   operator_domain_manip
+  spinning
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
