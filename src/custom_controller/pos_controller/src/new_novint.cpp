@@ -21,8 +21,13 @@ public:
     {
         whiteboard_l_ = 2.f;
         whiteboard_w_ = 2.f;
-        geofencing_offset_ = 2.f;
+        geofencing_offset_ = 10.f;
         use_geofencing_ = true;
+
+        whiteboard_corners_rotated_[0] = {whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f};
+        whiteboard_corners_rotated_[1] = {-whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f};
+        whiteboard_corners_rotated_[2] = {-whiteboard_l_ / 2.f, -whiteboard_w_ / 2.f, 0.f};
+        whiteboard_corners_rotated_[3] = {whiteboard_l_ / 2.f, -whiteboard_w_ / 2.f, 0.f};
 
         // Get ROS2 parameters and set defaults.
         declare_parameter("use_pd", true);
@@ -67,12 +72,6 @@ public:
         subscription_object_pose_ = 
             this->create_subscription<geometry_msgs::msg::PoseStamped>("/object/pose", 10, std::bind(&JogController::object_pose_callback, this, std::placeholders::_1));
         subscription_keyboard_ = this->create_subscription<std_msgs::msg::String>("/keyboard", 10, std::bind(&JogController::keyboard_callback, this, std::placeholders::_1));
-
-
-
-sub_spinning_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/spinning", 10, std::bind(&JogController::spinning_callback, this, std::placeholders::_1));
-spin_y = 0.f;
-
 
         std::string port = "192.168.1.171";
 
@@ -153,11 +152,6 @@ private:
     rclcpp::Publisher<custom_controller_interfaces::msg::LogMsg>::SharedPtr publisher_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sync_signal_pub_;
 
-
-
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub_spinning_;
-    fp32 spin_y;
-
     // Simple PD controller.
     std::array<float, 3> compute_control(const std::array<float, 3>& setpoint, std::array<float, 3> currPos) {
         std::array<float, 3> error;
@@ -192,21 +186,8 @@ private:
         // placeholder empty
     }
 
-    
-
-    void spinning_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
-    {
-        spin_y = msg->pose.orientation.x;
-    }
-
-
-
-
-
-
     void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
-
         tf2::Quaternion q(
             msg->pose.orientation.x,
             msg->pose.orientation.y,
@@ -216,8 +197,7 @@ private:
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
 
-
-        // coordinate fuckery
+        // coordinate fun
         tf2::Vector3 corner0_operator_coord_system(whiteboard_l_ / 2.f, 0.f, whiteboard_w_ / 2.f);
         tf2::Vector3 corner1_operator_coord_system(whiteboard_l_ / 2.f, 0.f, - whiteboard_w_ / 2.f);
         tf2::Vector3 corner2_operator_coord_system(- whiteboard_l_ / 2.f, 0.f, - whiteboard_w_ / 2.f);
@@ -239,24 +219,7 @@ private:
         whiteboard_corners_rotated_[2] = corner_rotated2_remote_system;
         whiteboard_corners_rotated_[3] = corner_rotated3_remote_system;
 
-
-        /*
-        tf2::Vector3 corner0(whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f);
-        tf2::Vector3 corner1(whiteboard_l_ / 2.f, - whiteboard_w_ / 2.f, 0.f);
-        tf2::Vector3 corner2(- whiteboard_l_ / 2.f, - whiteboard_w_ / 2.f, 0.f);
-        tf2::Vector3 corner3(- whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f);
-        // tf2::Vector3 corner_rotated0 = tf2::quatRotate(q, corner0);
-        // tf2::Vector3 corner_rotated1 = tf2::quatRotate(q, corner1);
-        // tf2::Vector3 corner_rotated2 = tf2::quatRotate(q, corner2);
-        // tf2::Vector3 corner_rotated3 = tf2::quatRotate(q, corner3);
-        
-        whiteboard_corners_rotated_[0] = tf2::quatRotate(q, corner0);
-        whiteboard_corners_rotated_[1] = tf2::quatRotate(q, corner1);
-        whiteboard_corners_rotated_[2] = tf2::quatRotate(q, corner2);
-        whiteboard_corners_rotated_[3] = tf2::quatRotate(q, corner3);
-
-        */
-
+        // TODO: possibly (likely) wrong
         object_pos_or[0] = msg->pose.position.y * x_scaling_;
         object_pos_or[1] = msg->pose.position.x * y_scaling_;
         object_pos_or[2] = msg->pose.position.z * z_scaling_;
@@ -284,18 +247,21 @@ private:
         // Line corner3 - corner0.
         fp32 d_corner3_corner0 = (whiteboard_corners_rotated_[0][0] - whiteboard_corners_rotated_[3][0]) * (novint_input[1] - whiteboard_corners_rotated_[3][1])
                     - (novint_input[0] - whiteboard_corners_rotated_[3][0]) * (whiteboard_corners_rotated_[0][1] - whiteboard_corners_rotated_[3][1]);
-        std::cout << "------------------------------------\n";
-        std::cout << "novint: (" << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2] << ")\n";
-        for (int i = 0; i < whiteboard_corners_rotated_.size(); i++) {
-            std::cout << "corner" << i << ": (" << whiteboard_corners_rotated_[i][0] << ", " << whiteboard_corners_rotated_[i][1] << ", " << whiteboard_corners_rotated_[i][2] << ")\n";
-        }
+        
 
+        // std::cout << "------------------------------------\n";
+        // std::cout << "novint: (" << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2] << ")\n";
+        // for (int i = 0; i < whiteboard_corners_rotated_.size(); i++) {
+        //     std::cout << "corner" << i << ": (" << whiteboard_corners_rotated_[i][0] << ", " << whiteboard_corners_rotated_[i][1] << ", " << whiteboard_corners_rotated_[i][2] << ")\n";
+        // }
+        // std::cout << "d_corner0_corner1 " << d_corner0_corner1 << std::endl;
+        // std::cout << "d_corner1_corner2 " << d_corner1_corner2 << std::endl;
+        // std::cout << "d_corner2_corner3 " << d_corner2_corner3 << std::endl;
+        // std::cout << "d_corner3_corner0 " << d_corner3_corner0 << std::endl;
 
         if (d_corner0_corner1 >= 0.f && d_corner1_corner2 >= 0.f && d_corner2_corner3 >= 0.f && d_corner3_corner0 >= 0.f) {
-            // std::cout << "in\n";
             return -1.f;
         } else {
-            // std::cout << "out\n";
             tf2::Quaternion whiteboard_rot_quat;
             whiteboard_rot_quat.setRPY(object_pos_or[3], object_pos_or[4], object_pos_or[5]);
             tf2::Vector3 rotated_novint_input = tf2::quatRotate(whiteboard_rot_quat, tf2::Vector3(novint_input[0], novint_input[1], 0));
@@ -315,25 +281,22 @@ private:
         if (use_geofencing_) {
             fp32 z_geofenced = calc_min_z_geofencing(novint_input);
             if (z_geofenced != -1.f) {
-                // std::cout << "z_val: " << z_val << ", z_geofenced: " << z_geofenced << std::endl;
+                if (z_val < (z_geofenced - geofencing_offset_) * z_scaling_ + z_offset_ + geofencing_offset_) {
+                    z_val = (z_geofenced - geofencing_offset_) * z_scaling_ + z_offset_ + geofencing_offset_;
+                }
             }
         }
-        // if (turn_attachment_) {
-        //     return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_offset_ + novint_input[2] * z_scaling_, 180.f + object_pos_or[1], 0.f + object_pos_or[0], 0.f};
-        // } else {
-        //     return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_offset_ + novint_input[2] * z_scaling_, 180.f, 0.f, 0.f};
-        // }
-
-
-
-        return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_offset_ + novint_input[2] * z_scaling_, 180.f, 0.f, spin_y};
+        if (turn_attachment_) {
+            return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_val, 180.f + object_pos_or[1], 0.f + object_pos_or[0], 0.f};
+        } else {
+            return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_val, 180.f, 0.f, 0.f};
+        }
     }
 
     void topic_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
         // See readme.
         std::array<fp32, 3> novint_input = {-msg->pose.position.z, msg->pose.position.x, msg->pose.position.y};
-
 
         // Moves robot to initial position in positioning mode so it doesn't overspeed itself.
         if (first_callback_) {
@@ -355,8 +318,6 @@ private:
         std::array<fp32, 6> input = compute_input(novint_input);
         fp32 poses[6];
         std::copy(input.begin(), input.end(), poses);
-
-        // std::cout << poses[0] << ", " << poses[1] << ", " << poses[2] << std::endl;
 
         // Calculate and apply control signal.
         std::array<fp32, 3> control_signal;
@@ -391,12 +352,6 @@ private:
 
         // Set arm position at 250Hz.
         int ret = arm->set_servo_cartesian(poses, 1);
-
-        // std::cout << arm->joints_torque[5] << std::endl;
-        // log_file << arm->joints_torque[5] << std::endl;
-
-
-
         sleep_milliseconds(4);
         if (ret != 0 && ret != 1) {
             printf("set_servo_cartesian, ret=%d\n", ret);
