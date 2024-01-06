@@ -14,6 +14,7 @@ ImuRecorderNode::ImuRecorderNode() : Node("imu_recorder")
     this->recordFlag.exchange(false);
     // sleep_milliseconds(1000);
     startImuRecorderThread();
+    startSaveThread();
     std::cout << "ImuRecorderNode started" << std::endl;
 
 }
@@ -28,27 +29,40 @@ void ImuRecorderNode::startImuRecorderThread(){
     recorderThread = std::thread([this]() {
         WifiCommunicator wifi; // Initialize WiFi settings and initiate communication with Arduino. (Wifi should be connected beforehand)
         SensorOutput sensorOutput; // Struct that is used to handle sensor output data from Arduino.
-        std::ofstream imuDataRecording;
-        imuDataRecording.open ("imuData.csv");
-
+        std::ofstream imuCalibRecording;
+        imuCalibRecording.open("calibImuData.csv");
 
         wifi.sendMessageToArduino("Start"); // Send out the start signal to
 
         while(!this->recordFlag.load()){
-
             wifi.receiveSensorOutputFromArduino(sensorOutput); // Receive but discard the incoming data. (not doing this caused a gap in the data.)
 
+            imuCalibRecording<<sensorOutput.accX<<","<<sensorOutput.accY<<","<<sensorOutput.accZ<<","<<sensorOutput.gyroX<<","
+                            <<sensorOutput.gyroY<<","<<sensorOutput.gyroZ<<","<<sensorOutput.timestamp<<"\n";
+
         }
+
         
         std::cout<<"Recording Started!\n";
+        rclcpp::Time time_stamp = this->now(); // Get the first system time stamp to calibrate with the imu timestamp. and insert it as th
+        imuCalibRecording<<"Initial system timestamp is : ,"<<(time_stamp.nanoseconds()/1000)%10000000000<<"(us)\n";
+        imuCalibRecording.close();
 
-        while (this->recordFlag.load()&&rclcpp::ok()) {
-
+        while (this->recordFlag.load()) {
+            
             wifi.receiveSensorOutputFromArduino(sensorOutput); // This is a blocking receive.
-            imuDataRecording<<sensorOutput.accX<<","<<sensorOutput.accY<<","<<sensorOutput.accZ<<","<<sensorOutput.gyroX<<","
-                            <<sensorOutput.gyroY<<","<<sensorOutput.gyroZ<<","<<sensorOutput.timestamp<<"\n";
-        }
-        imuDataRecording.close();
+            {
+                std::lock_guard<std::mutex> lock(this->sensorMutex);
+                this->sensorQueue.push(sensorOutput);
+            }
+                this->sensorQueueCondition.notify_one();
+
+            }            
+            {
+                std::lock_guard<std::mutex> lock(this->sensorMutex);
+                this->captureDone = true;
+            }
+            this->sensorQueueCondition.notify_one();
     });
 }
 
@@ -64,35 +78,34 @@ void ImuRecorderNode::sync_callback(const std_msgs::msg::String::SharedPtr msg) 
 }
 
 
-// void CameraRecorderNode::startSaveThread(){
+void ImuRecorderNode::startSaveThread(){
         
 
+    saveThread = std::thread([this]() {
+        std::ofstream imuDataRecording;
+        imuDataRecording.open("imuData.csv");
 
-//     saveThread = std::thread([this]() {
-//         int frameNumber = 0;
-//         std::string folderPath = "./captured_frames/"; // folder where images will be saved
+        while (true) {
+            std::unique_lock<std::mutex> lock(this->sensorMutex);
+            this->sensorQueueCondition.wait(lock, [this] { return !this->sensorQueue.empty() || this->captureDone; });
 
-//         while (true) {
-//             std::unique_lock<std::mutex> lock(this->FrameMutex);
-//             this->frameQueueCondition.wait(lock, [this] { return !this->frameQueue.empty() || this->captureDone; });
+            while (!this->sensorQueue.empty()) {
+                SensorOutput sensorOutput = this->sensorQueue.front();
+                this->sensorQueue.pop();
+                lock.unlock();
 
-//             while (!this->frameQueue.empty()) {
-//                 cv::Mat frame = this->frameQueue.front();
-//                 this->frameQueue.pop();
-//                 lock.unlock();
+            imuDataRecording<<sensorOutput.accX<<","<<sensorOutput.accY<<","<<sensorOutput.accZ<<","<<sensorOutput.gyroX<<","
+                            <<sensorOutput.gyroY<<","<<sensorOutput.gyroZ<<","<<sensorOutput.timestamp<<"\n";
 
-//                 std::string filename = folderPath + "frame_" + std::to_string(frameNumber++) + ".png";
-//                 if (!cv::imwrite(filename, frame)) {
-//                     std::cerr << "ERROR: Could not save image " << filename << std::endl;
-//                 }
+            lock.lock();
+            }
 
-//                 lock.lock();
-//             }
+            if (this->captureDone && this->sensorQueue.empty()) {
+                break;
+            }
+        }
+        imuDataRecording.close();
 
-//             if (this->captureDone && this->frameQueue.empty()) {
-//                 break;
-//             }
-//         }
-//     });     
-// }  
+    });     
+}  
 

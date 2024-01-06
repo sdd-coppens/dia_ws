@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <queue>
 
 #include "../util/WifiCommunicator.hpp"
 
@@ -17,7 +18,13 @@ class ImuRecorderNode : public rclcpp::Node
         rclcpp::Publisher<std_msgs::msg::String>::SharedPtr publisher_;
         rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_;
         std::thread recorderThread;
+        std::thread saveThread;
+        std::mutex sensorMutex;
+        std::queue<SensorOutput> sensorQueue;
+        std::condition_variable sensorQueueCondition;
+        bool captureDone;
         void startImuRecorderThread();
+        void startSaveThread();
         void sync_callback(const std_msgs::msg::String::SharedPtr msg);
 
     public:

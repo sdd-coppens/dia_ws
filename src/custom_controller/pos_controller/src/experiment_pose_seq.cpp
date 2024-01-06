@@ -26,7 +26,7 @@ class JogController : public rclcpp::Node
 public:
     JogController() : Node("jog_controller")
     {
-     
+        
         // Open csv logging.
         log_file.open("log_file.csv");
         log_file << "timestamp (ms)" << "," << "curr_pos_x" << "," << "curr_pos_y" << "," << "curr_pos_z" << "," <<"curr_rot_r"<<  "," <<"curr_rot_p"<< "," <<"curr_rot_y"<<"\n";
@@ -45,6 +45,7 @@ public:
         arm->set_state(0);
         sleep_milliseconds(500);
 
+        arm->set_collision_tool_model(22,3,100,100,100);
         // Enable servo jog mode.
         // arm->reset(true);
         arm->set_mode(1);
@@ -56,15 +57,22 @@ public:
         arm->set_reduced_mode(true);
         arm->set_reduced_mode(false);
         sleep_milliseconds(100);
-        x = -134.9999;
-        incr = 0.5;
+
+
+        x = -260;
+        y = 39.999;
+        z = 260;
+        r = 180;
+        p = 0; 
+        yaw = 45;
+        incr = -0.5;
         change = 0;
 
         timer_ = this->create_wall_timer(4ms, std::bind(&JogController::timer_callback, this));
 
         arm->set_mode(0);
         arm->set_state(0);
-        std::array<fp32, 6> first_input = {290,0,240,180,0,-135};
+        std::array<fp32, 6> first_input = {x,y,z,r,p,yaw};
         fp32 first_pose[6];
         std::copy(first_input.begin(), first_input.end(), first_pose);
         arm->set_position(first_pose, true);
@@ -84,41 +92,33 @@ public:
 
     ~JogController() {
 
-
-        log_file.close();
     }
 
 private:
     std::ofstream log_file;
-    fp32 x, incr;
+    fp32 x,y,z,r,p,yaw, incr;
     int change;
     XArmAPI *arm;
 
-
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sync_signal_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
-
 
     void timer_callback()
     {   if(change == 4){return;}
         fp32* curr_pos = static_cast<fp32*>(malloc(6 * sizeof(fp32)));
         arm->get_position(curr_pos);
-        if (x > 135 || x <= -135) {
+
+        if (yaw > 45 || yaw <= -315) {
             incr *= -1;
-            // x *=-1;
             change++;
         }
-        // if (x > 180) {
-        //     // incr *= -1;
-        //     x *=-1;
-        //     change++;
-        // }
-        x += incr;
+        yaw += incr;
+
         // Logging to csv.
         rclcpp::Time time_stamp = this->now();
-        fp32 poses[6] = {290, 0, 240, 180, 0, x};
+        fp32 poses[6] = {x,y,z,r,p,yaw};
         // Set arm position at 250Hz. 
-        log_file <<time_stamp.nanoseconds()/1000 << "," << curr_pos[0] << ","<< curr_pos[1] << "," << curr_pos[2]<<","<< curr_pos[3]<<","<< curr_pos[4]<<","<< curr_pos[5]<<"\n"; //  r-p-y
+        log_file <<(time_stamp.nanoseconds()/1000)%10000000000 << "," << curr_pos[0] << ","<< curr_pos[1] << "," << curr_pos[2]<<","<< curr_pos[3]<<","<< curr_pos[4]<<","<< curr_pos[5]<<"\n"; //  r-p-y
         int ret = arm->set_servo_cartesian(poses, 1);
         sleep_milliseconds(4);
         if (ret != 0 && ret != 1) {
@@ -127,6 +127,7 @@ private:
         if(change == 4){
             auto message = std_msgs::msg::String();
             message.data = "stop";
+            log_file.close();
             sync_signal_pub_->publish(message);
             printf("sync stop signal published\n");
         }

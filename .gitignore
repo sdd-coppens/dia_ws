@@ -4,5 +4,6 @@ install
 build
 *.csv
 /captured_frames
+/calibration_frames
 /Experiment_Data
 /Experiment_Sequences

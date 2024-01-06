@@ -30,11 +30,12 @@ CameraRecorderNode::~CameraRecorderNode()
 void CameraRecorderNode::startCameraRecorderThread(){
         
         recorderThread = std::thread([this]() {
-
+            std::ofstream frame_timestamps; // Log file where timestamps of the frames will be recorded.
+            frame_timestamps.open("frame_timestamps.csv");  
             cv::Mat frame;
-            while(!this->recordFlag) {} // Wait for the start signal.
-            while(this->recordFlag){
 
+            while(!this->recordFlag.load()) {
+                
                 inputVideo >> frame; // get a new frame from camera
                 if (frame.empty()) break; // check if we succeeded           
 
@@ -43,7 +44,32 @@ void CameraRecorderNode::startCameraRecorderThread(){
                     this->frameQueue.push(frame.clone());
                 }
                 this->frameQueueCondition.notify_one();
+            } 
+
+            {
+                std::lock_guard<std::mutex> lock(this->FrameMutex);
+                this->captureDone = true;
+                //Clear the queue. So it discards ny calibration frames that were not saved (not an issue but may cause a couple fewer calibration frames.)
+                std::queue<cv::Mat> empty;
+                std::swap( this->frameQueue, empty );
             }
+
+
+            while(this->recordFlag.load()){
+
+                inputVideo >> frame; // get a new frame from camera
+                rclcpp::Time time_stamp = this->now();
+                if (frame.empty()) break; // check if we succeeded           
+
+                {
+                    std::lock_guard<std::mutex> lock(this->FrameMutex);
+                    this->frameQueue.push(frame.clone());
+                    frame_timestamps<<(time_stamp.nanoseconds()/1000)%10000000000<<"\n";
+
+                }
+                this->frameQueueCondition.notify_one();
+            }
+            frame_timestamps.close();
 
             {
                 std::lock_guard<std::mutex> lock(this->FrameMutex);
@@ -53,16 +79,50 @@ void CameraRecorderNode::startCameraRecorderThread(){
 
         });
         
-    }
+}
 
 
 void CameraRecorderNode::startSaveThread(){
         
 
-
     saveThread = std::thread([this]() {
+
         int frameNumber = 0;
+        std::string calibFolderPath = "./calibration_frames/"; // folder where images will be saved
+
+        while (true) {
+            std::unique_lock<std::mutex> lock(this->FrameMutex);
+            this->frameQueueCondition.wait(lock, [this] { return !this->frameQueue.empty() || this->captureDone; });
+
+            while (!this->frameQueue.empty()) {
+                cv::Mat frame = this->frameQueue.front();
+                this->frameQueue.pop();
+                lock.unlock();
+
+                std::string filename = calibFolderPath + "frame_" + std::to_string(frameNumber++) + ".png";
+
+                if (!cv::imwrite(filename, frame)) {
+                    std::cerr << "ERROR: Could not save image " << filename << std::endl;
+                }
+
+                lock.lock();
+            }
+
+            if (this->captureDone && this->frameQueue.empty()) {
+                break;
+            }
+
+        }
+        
+        {
+            std::lock_guard<std::mutex> lock(this->FrameMutex);
+            this->captureDone = false;
+        }
+
+
+        frameNumber = 0;
         std::string folderPath = "./captured_frames/"; // folder where images will be saved
+        
 
         while (true) {
             std::unique_lock<std::mutex> lock(this->FrameMutex);
@@ -74,6 +134,7 @@ void CameraRecorderNode::startSaveThread(){
                 lock.unlock();
 
                 std::string filename = folderPath + "frame_" + std::to_string(frameNumber++) + ".png";
+
                 if (!cv::imwrite(filename, frame)) {
                     std::cerr << "ERROR: Could not save image " << filename << std::endl;
                 }
