@@ -85,7 +85,8 @@ private:
         // msg.pose.orientation.w = 2000 / 8000.f;
         msg.pose.orientation.w = w_;
 
-        std::array<float, 4> normalized_quat = normalize(msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w);
+        // Swap around y and z due to coordinate system differences.
+        std::array<float, 4> normalized_quat = normalize(msg.pose.orientation.x, msg.pose.orientation.z, msg.pose.orientation.y, msg.pose.orientation.w);
         msg.pose.orientation.x = normalized_quat[0];
         msg.pose.orientation.y = normalized_quat[1];
         msg.pose.orientation.z = normalized_quat[2];

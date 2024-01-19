@@ -35,6 +35,9 @@ ament_target_dependencies(keyboard rclcpp std_msgs)
 add_executable(new_novint src/new_novint.cpp)
 ament_target_dependencies(new_novint rclcpp xarm_sdk std_msgs geometry_msgs custom_controller_interfaces tf2 tf2_ros)
 
+add_executable(compliant_loadcell src/compliant_loadcell.cpp)
+ament_target_dependencies(compliant_loadcell rclcpp xarm_sdk std_msgs geometry_msgs custom_controller_interfaces)
+
 add_executable(operator_domain_manip src/operator_domain_manip.cpp)
 ament_target_dependencies(operator_domain_manip rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs)
 
@@ -52,6 +55,7 @@ install(TARGETS
   new_novint
   operator_domain_manip
   spinning
+  compliant_loadcell
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

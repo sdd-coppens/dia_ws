@@ -14,6 +14,8 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
 
+#include "util/WifiCommunicator.hpp"
+
 class JogController : public rclcpp::Node
 {
 public:
@@ -22,7 +24,7 @@ public:
         whiteboard_l_ = 2.f;
         whiteboard_w_ = 2.f;
         geofencing_offset_ = 10.f;
-        use_geofencing_ = true;
+        use_geofencing_ = false;
 
         whiteboard_corners_rotated_[0] = {whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f};
         whiteboard_corners_rotated_[1] = {-whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f};
@@ -111,6 +113,8 @@ public:
         sync_signal_pub_->publish(message);
 
         printf("=========================================\n");
+
+        // wificom = WifiCommunicator("192.168.1.134");
     }
 
     ~JogController() {
@@ -123,6 +127,8 @@ public:
     }
 
 private:
+    WifiCommunicator wificom = WifiCommunicator("192.168.1.134");
+
     fp32 whiteboard_l_;
     fp32 whiteboard_w_;
     std::array<tf2::Vector3, 4> whiteboard_corners_rotated_;
@@ -183,16 +189,25 @@ private:
     // Keyboard listener.
     void keyboard_callback(const std_msgs::msg::String::SharedPtr msg)
     {
+        wificom.sendMessageToArduino("0.1023,0.1");
         // placeholder empty
     }
 
     void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
     {
+        // tf2::Quaternion q(
+        //     msg->pose.orientation.x,
+        //     msg->pose.orientation.y,
+        //     msg->pose.orientation.z,
+        //     msg->pose.orientation.w);
+
+        // TESTING
         tf2::Quaternion q(
             msg->pose.orientation.x,
-            msg->pose.orientation.y,
             msg->pose.orientation.z,
+            msg->pose.orientation.y,
             msg->pose.orientation.w);
+
         tf2::Matrix3x3 m(q);
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
@@ -207,6 +222,13 @@ private:
         tf2::Vector3 corner_rotated1_operator_coord_system = tf2::quatRotate(q, corner1_operator_coord_system);
         tf2::Vector3 corner_rotated2_operator_coord_system = tf2::quatRotate(q, corner2_operator_coord_system);
         tf2::Vector3 corner_rotated3_operator_coord_system = tf2::quatRotate(q, corner3_operator_coord_system);
+
+        // TODO: Temporary testing
+        tf2::Vector3 plane_normal(0.f, 0.f, 1.f);
+        tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
+        // std::cout << "plane normal rot: " << plane_normal_rot[0] << ", " << plane_normal_rot[1] << ", " << plane_normal_rot[2] << std::endl;
+        wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0])+","+std::to_string(plane_normal_rot[1]));
+        // wificom.sendMessageToArduino(std::to_string(0.2)+","+std::to_string(0.2));
 
         // See readme
         tf2::Vector3 corner_rotated0_remote_system(-corner_rotated0_operator_coord_system[2], corner_rotated0_operator_coord_system[0], corner_rotated0_operator_coord_system[1]);
