@@ -14,8 +14,11 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 
 find_package(rclcpp REQUIRED)
+find_package(rclpy REQUIRED)
+
 find_package(rosbag2_cpp REQUIRED)
 find_package(custom_controller_interfaces REQUIRED)
 find_package(xarm_sdk REQUIRED)
@@ -69,5 +72,12 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+
+ament_python_install_package(${PROJECT_NAME})
+install(PROGRAMS
+  scripts/lc_vector_predict.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ament_package()

@@ -16,6 +16,8 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PosMsg.msg"
   "msg/LogMsg.msg"
+  "msg/LCMsg.msg"
+  "msg/VecPredictMsg.msg"
   "srv/VectorPredictionLC.srv"
  )
 
