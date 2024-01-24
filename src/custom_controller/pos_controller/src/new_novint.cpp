@@ -158,7 +158,7 @@ private:
     rclcpp::Publisher<custom_controller_interfaces::msg::LogMsg>::SharedPtr publisher_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sync_signal_pub_;
 
-    // Simple PD controller.
+    // PD controller.
     std::array<float, 3> compute_control(const std::array<float, 3>& setpoint, std::array<float, 3> currPos) {
         std::array<float, 3> error;
 
