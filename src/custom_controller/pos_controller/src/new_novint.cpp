@@ -16,6 +16,10 @@
 
 #include "util/wifi_communicator/WifiCommunicator.hpp"
 
+
+
+
+
 class JogController : public rclcpp::Node
 {
 public:
@@ -158,6 +162,78 @@ private:
     rclcpp::Publisher<custom_controller_interfaces::msg::LogMsg>::SharedPtr publisher_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sync_signal_pub_;
 
+    //Make get the 8 poitns of a 1x1x1 cube
+    Eigen::Vector3f cube_points[8];
+    cube_points[0] = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+    cube_points[1] = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    cube_points[2] = Eigen::Vector3f(0.0f, 1.0f, 0.0f);
+    cube_points[3] = Eigen::Vector3f(1.0f, 1.0f, 0.0f);
+    cube_points[4] = Eigen::Vector3f(0.0f, 0.0f, 1.0f);
+    cube_points[5] = Eigen::Vector3f(1.0f, 0.0f, 1.0f);
+    cube_points[6] = Eigen::Vector3f(0.0f, 1.0f, 1.0f);
+    cube_points[7] = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
+
+    //Make get the 12 triangles of a 1x1x1 cube
+    Eigen::Matrix<float, 3, 3> cube_triangles[12];
+    cube_triangles[0].col(0) = cube_points[0];
+    cube_triangles[0].col(1) = cube_points[1];
+    cube_triangles[0].col(2) = cube_points[2];
+
+    cube_triangles[1].col(0) = cube_points[1];
+    cube_triangles[1].col(1) = cube_points[2];
+    cube_triangles[1].col(2) = cube_points[3];
+
+    cube_triangles[2].col(0) = cube_points[0];
+    cube_triangles[2].col(1) = cube_points[1];
+    cube_triangles[2].col(2) = cube_points[4];
+
+    cube_triangles[3].col(0) = cube_points[1];
+    cube_triangles[3].col(1) = cube_points[4];
+    cube_triangles[3].col(2) = cube_points[5];
+
+    cube_triangles[4].col(0) = cube_points[0];
+    cube_triangles[4].col(1) = cube_points[2];
+    cube_triangles[4].col(2) = cube_points[4];
+
+    cube_triangles[5].col(0) = cube_points[2];
+    cube_triangles[5].col(1) = cube_points[4];
+    cube_triangles[5].col(2) = cube_points[6];
+
+    cube_triangles[6].col(0) = cube_points[1];
+    cube_triangles[6].col(1) = cube_points[3];
+    cube_triangles[6].col(2) = cube_points[5];
+
+    cube_triangles[7].col(0) = cube_points[3];
+    cube_triangles[7].col(1) = cube_points[5];
+    cube_triangles[7].col(2) = cube_points[7];
+
+    cube_triangles[8].col(0) = cube_points[2];
+    cube_triangles[8].col(1) = cube_points[3];
+    cube_triangles[8].col(2) = cube_points[6];
+
+    cube_triangles[9].col(0) = cube_points[3];
+    cube_triangles[9].col(1) = cube_points[6];
+    cube_triangles[9].col(2) = cube_points[7];
+
+    cube_triangles[10].col(0) = cube_points[4];
+    cube_triangles[10].col(1) = cube_points[5];
+    cube_triangles[10].col(2) = cube_points[6];
+
+    cube_triangles[11].col(0) = cube_points[5];
+    cube_triangles[11].col(1) = cube_points[6];
+    cube_triangles[11].col(2) = cube_points[7];
+
+    std::vector<Eigen::Matrix<float, 3, 3>> triangles;
+    triangles.push_back(cube_triangles[0]);
+    triangles.push_back(cube_triangles[1]);
+    triangles.push_back(cube_triangles[2]);
+    triangles.push_back(cube_triangles[3]);
+    triangles.push_back(cube_triangles[4]);
+    triangles.push_back(cube_triangles[5]);
+    triangles.push_back(cube_triangles[6]);
+    triangles.push_back(cube_triangles[7]);
+
+
     // PD controller.
     std::array<float, 3> compute_control(const std::array<float, 3>& setpoint, std::array<float, 3> currPos) {
         std::array<float, 3> error;
@@ -211,6 +287,22 @@ private:
         tf2::Matrix3x3 m(q);
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
+
+        //warping shit
+
+        Eigen::Vector3f p(msg->pose.position.x,  msg->pose.position.y, msg->pose.position.z);
+
+        Eigen::Vector3f translation_operator(0.0f, 0.0f, 0.0f);
+        Eigen::Matrix<float, 3, 3> rotation_operator = Eigen::Matrix<float, 3, 3>::Identity();
+
+        Eigen::Vector3f translation_remote(0.0f, 0.1f, 0.0f);
+        Eigen::Matrix<float, 3, 3> rotation_remote = Eigen::Matrix<float, 3, 3>::Identity();
+
+        Eigen::Vector3f p_remote;
+        get_new_point(p, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote, p_remote);
+
+        //print p_remote
+        std::cout << "p_remote: " << p_remote << std::endl;
 
         // coordinate fun
         tf2::Vector3 corner0_operator_coord_system(whiteboard_l_ / 2.f, 0.f, whiteboard_w_ / 2.f);
