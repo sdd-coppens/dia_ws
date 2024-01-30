@@ -14,7 +14,7 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
 
-#include "util/WifiCommunicator.hpp"
+#include "util/wifi_communicator/WifiCommunicator.hpp"
 
 class JogController : public rclcpp::Node
 {

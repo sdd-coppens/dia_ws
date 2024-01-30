@@ -12,7 +12,7 @@
 #include <future>
 #include <memory>
 
-#include "util/WifiCommunicator.hpp"
+#include "util/wifi_communicator/WifiCommunicator.hpp"
 
 #include <boost/circular_buffer.hpp>
 
