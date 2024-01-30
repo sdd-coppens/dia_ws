@@ -16,8 +16,7 @@
 
 #include "util/wifi_communicator/WifiCommunicator.hpp"
 
-
-
+#include "util/perturb/PerturbMotion.hpp"
 
 
 class JogController : public rclcpp::Node
@@ -77,6 +76,8 @@ public:
             this->create_subscription<geometry_msgs::msg::PoseStamped>("/proxy/pose", 10, std::bind(&JogController::topic_callback, this, std::placeholders::_1));
         subscription_object_pose_ = 
             this->create_subscription<geometry_msgs::msg::PoseStamped>("/object/pose", 10, std::bind(&JogController::object_pose_callback, this, std::placeholders::_1));
+        subscription_demo_object_pose_ = 
+            this->create_subscription<geometry_msgs::msg::PoseStamped>("/demo_object/pose", 10, std::bind(&JogController::demo_object_pose_callback, this, std::placeholders::_1));
         subscription_keyboard_ = this->create_subscription<std_msgs::msg::String>("/keyboard", 10, std::bind(&JogController::keyboard_callback, this, std::placeholders::_1));
 
         std::string port = "192.168.1.171";
@@ -119,6 +120,77 @@ public:
         printf("=========================================\n");
 
         // wificom = WifiCommunicator("192.168.1.134");
+
+        demo_object_pose_ = {0.f, 0.f, 0.f};
+
+        // funky eigen stuff
+        cube_points[0] = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
+        cube_points[1] = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+        cube_points[2] = Eigen::Vector3f(0.0f, 1.0f, 0.0f);
+        cube_points[3] = Eigen::Vector3f(1.0f, 1.0f, 0.0f);
+        cube_points[4] = Eigen::Vector3f(0.0f, 0.0f, 1.0f);
+        cube_points[5] = Eigen::Vector3f(1.0f, 0.0f, 1.0f);
+        cube_points[6] = Eigen::Vector3f(0.0f, 1.0f, 1.0f);
+        cube_points[7] = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
+
+
+        cube_triangles[0].col(0) = cube_points[0];
+        cube_triangles[0].col(1) = cube_points[1];
+        cube_triangles[0].col(2) = cube_points[2];
+
+        cube_triangles[1].col(0) = cube_points[1];
+        cube_triangles[1].col(1) = cube_points[2];
+        cube_triangles[1].col(2) = cube_points[3];
+
+        cube_triangles[2].col(0) = cube_points[0];
+        cube_triangles[2].col(1) = cube_points[1];
+        cube_triangles[2].col(2) = cube_points[4];
+
+        cube_triangles[3].col(0) = cube_points[1];
+        cube_triangles[3].col(1) = cube_points[4];
+        cube_triangles[3].col(2) = cube_points[5];
+
+        cube_triangles[4].col(0) = cube_points[0];
+        cube_triangles[4].col(1) = cube_points[2];
+        cube_triangles[4].col(2) = cube_points[4];
+
+        cube_triangles[5].col(0) = cube_points[2];
+        cube_triangles[5].col(1) = cube_points[4];
+        cube_triangles[5].col(2) = cube_points[6];
+
+        cube_triangles[6].col(0) = cube_points[1];
+        cube_triangles[6].col(1) = cube_points[3];
+        cube_triangles[6].col(2) = cube_points[5];
+
+        cube_triangles[7].col(0) = cube_points[3];
+        cube_triangles[7].col(1) = cube_points[5];
+        cube_triangles[7].col(2) = cube_points[7];
+
+        cube_triangles[8].col(0) = cube_points[2];
+        cube_triangles[8].col(1) = cube_points[3];
+        cube_triangles[8].col(2) = cube_points[6];
+
+        cube_triangles[9].col(0) = cube_points[3];
+        cube_triangles[9].col(1) = cube_points[6];
+        cube_triangles[9].col(2) = cube_points[7];
+
+        cube_triangles[10].col(0) = cube_points[4];
+        cube_triangles[10].col(1) = cube_points[5];
+        cube_triangles[10].col(2) = cube_points[6];
+
+        cube_triangles[11].col(0) = cube_points[5];
+        cube_triangles[11].col(1) = cube_points[6];
+        cube_triangles[11].col(2) = cube_points[7];
+
+
+        triangles.push_back(cube_triangles[0]);
+        triangles.push_back(cube_triangles[1]);
+        triangles.push_back(cube_triangles[2]);
+        triangles.push_back(cube_triangles[3]);
+        triangles.push_back(cube_triangles[4]);
+        triangles.push_back(cube_triangles[5]);
+        triangles.push_back(cube_triangles[6]);
+        triangles.push_back(cube_triangles[7]);
     }
 
     ~JogController() {
@@ -159,80 +231,19 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_keyboard_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_object_pose_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_demo_object_pose_;
     rclcpp::Publisher<custom_controller_interfaces::msg::LogMsg>::SharedPtr publisher_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sync_signal_pub_;
 
     //Make get the 8 poitns of a 1x1x1 cube
     Eigen::Vector3f cube_points[8];
-    cube_points[0] = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
-    cube_points[1] = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
-    cube_points[2] = Eigen::Vector3f(0.0f, 1.0f, 0.0f);
-    cube_points[3] = Eigen::Vector3f(1.0f, 1.0f, 0.0f);
-    cube_points[4] = Eigen::Vector3f(0.0f, 0.0f, 1.0f);
-    cube_points[5] = Eigen::Vector3f(1.0f, 0.0f, 1.0f);
-    cube_points[6] = Eigen::Vector3f(0.0f, 1.0f, 1.0f);
-    cube_points[7] = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
-
+    
     //Make get the 12 triangles of a 1x1x1 cube
     Eigen::Matrix<float, 3, 3> cube_triangles[12];
-    cube_triangles[0].col(0) = cube_points[0];
-    cube_triangles[0].col(1) = cube_points[1];
-    cube_triangles[0].col(2) = cube_points[2];
-
-    cube_triangles[1].col(0) = cube_points[1];
-    cube_triangles[1].col(1) = cube_points[2];
-    cube_triangles[1].col(2) = cube_points[3];
-
-    cube_triangles[2].col(0) = cube_points[0];
-    cube_triangles[2].col(1) = cube_points[1];
-    cube_triangles[2].col(2) = cube_points[4];
-
-    cube_triangles[3].col(0) = cube_points[1];
-    cube_triangles[3].col(1) = cube_points[4];
-    cube_triangles[3].col(2) = cube_points[5];
-
-    cube_triangles[4].col(0) = cube_points[0];
-    cube_triangles[4].col(1) = cube_points[2];
-    cube_triangles[4].col(2) = cube_points[4];
-
-    cube_triangles[5].col(0) = cube_points[2];
-    cube_triangles[5].col(1) = cube_points[4];
-    cube_triangles[5].col(2) = cube_points[6];
-
-    cube_triangles[6].col(0) = cube_points[1];
-    cube_triangles[6].col(1) = cube_points[3];
-    cube_triangles[6].col(2) = cube_points[5];
-
-    cube_triangles[7].col(0) = cube_points[3];
-    cube_triangles[7].col(1) = cube_points[5];
-    cube_triangles[7].col(2) = cube_points[7];
-
-    cube_triangles[8].col(0) = cube_points[2];
-    cube_triangles[8].col(1) = cube_points[3];
-    cube_triangles[8].col(2) = cube_points[6];
-
-    cube_triangles[9].col(0) = cube_points[3];
-    cube_triangles[9].col(1) = cube_points[6];
-    cube_triangles[9].col(2) = cube_points[7];
-
-    cube_triangles[10].col(0) = cube_points[4];
-    cube_triangles[10].col(1) = cube_points[5];
-    cube_triangles[10].col(2) = cube_points[6];
-
-    cube_triangles[11].col(0) = cube_points[5];
-    cube_triangles[11].col(1) = cube_points[6];
-    cube_triangles[11].col(2) = cube_points[7];
 
     std::vector<Eigen::Matrix<float, 3, 3>> triangles;
-    triangles.push_back(cube_triangles[0]);
-    triangles.push_back(cube_triangles[1]);
-    triangles.push_back(cube_triangles[2]);
-    triangles.push_back(cube_triangles[3]);
-    triangles.push_back(cube_triangles[4]);
-    triangles.push_back(cube_triangles[5]);
-    triangles.push_back(cube_triangles[6]);
-    triangles.push_back(cube_triangles[7]);
 
+    std::array<fp32, 3> demo_object_pose_;
 
     // PD controller.
     std::array<float, 3> compute_control(const std::array<float, 3>& setpoint, std::array<float, 3> currPos) {
@@ -288,22 +299,6 @@ private:
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
 
-        //warping shit
-
-        Eigen::Vector3f p(msg->pose.position.x,  msg->pose.position.y, msg->pose.position.z);
-
-        Eigen::Vector3f translation_operator(0.0f, 0.0f, 0.0f);
-        Eigen::Matrix<float, 3, 3> rotation_operator = Eigen::Matrix<float, 3, 3>::Identity();
-
-        Eigen::Vector3f translation_remote(0.0f, 0.1f, 0.0f);
-        Eigen::Matrix<float, 3, 3> rotation_remote = Eigen::Matrix<float, 3, 3>::Identity();
-
-        Eigen::Vector3f p_remote;
-        get_new_point(p, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote, p_remote);
-
-        //print p_remote
-        std::cout << "p_remote: " << p_remote << std::endl;
-
         // coordinate fun
         tf2::Vector3 corner0_operator_coord_system(whiteboard_l_ / 2.f, 0.f, whiteboard_w_ / 2.f);
         tf2::Vector3 corner1_operator_coord_system(whiteboard_l_ / 2.f, 0.f, - whiteboard_w_ / 2.f);
@@ -319,8 +314,8 @@ private:
         tf2::Vector3 plane_normal(0.f, 0.f, 1.f);
         tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
         // std::cout << "plane normal rot: " << plane_normal_rot[0] << ", " << plane_normal_rot[1] << ", " << plane_normal_rot[2] << std::endl;
-        wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0])+","+std::to_string(plane_normal_rot[1]));
-        // wificom.sendMessageToArduino(std::to_string(0.2)+","+std::to_string(0.2));
+        // wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0])+","+std::to_string(plane_normal_rot[1]));
+        wificom.sendMessageToArduino(std::to_string(plane_normal_rot[0])+","+std::to_string(-plane_normal_rot[1]));
 
         // See readme
         tf2::Vector3 corner_rotated0_remote_system(-corner_rotated0_operator_coord_system[2], corner_rotated0_operator_coord_system[0], corner_rotated0_operator_coord_system[1]);
@@ -334,12 +329,23 @@ private:
         whiteboard_corners_rotated_[3] = corner_rotated3_remote_system;
 
         // TODO: possibly (likely) wrong
-        object_pos_or[0] = msg->pose.position.y * x_scaling_;
-        object_pos_or[1] = msg->pose.position.x * y_scaling_;
-        object_pos_or[2] = msg->pose.position.z * z_scaling_;
+        // object_pos_or[0] = msg->pose.position.y * x_scaling_;
+        // object_pos_or[1] = msg->pose.position.x * y_scaling_;
+        // object_pos_or[2] = msg->pose.position.z * z_scaling_;
+        object_pos_or[0] = msg->pose.position.y;
+        object_pos_or[1] = msg->pose.position.x;
+        object_pos_or[2] = msg->pose.position.z;
         object_pos_or[3] = roll * 180.f / M_PI;
         object_pos_or[4] = pitch * 180.f / M_PI;
         object_pos_or[5] = yaw * 180.f / M_PI;
+    }
+
+    void demo_object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+    {
+        demo_object_pose_[0] = msg->pose.position.x;
+        demo_object_pose_[1] = msg->pose.position.y;
+        demo_object_pose_[2] = msg->pose.position.z;
+        std::cout << demo_object_pose_[0] << ", " << demo_object_pose_[1] << ", " << demo_object_pose_[2] << std::endl;
     }
 
     fp32 calc_min_z_geofencing(std::array<fp32, 3> novint_input) {
@@ -444,6 +450,22 @@ private:
         } else {
             control_signal = {0.f, 0.f, 0.f};
         }
+
+        //warping shit
+        Eigen::Vector3f p(novint_input[0], novint_input[1], novint_input[2]);
+
+        Eigen::Vector3f translation_operator(demo_object_pose_[0], demo_object_pose_[1], demo_object_pose_[2]);
+        Eigen::Matrix<float, 3, 3> rotation_operator = Eigen::Matrix<float, 3, 3>::Identity();
+
+        Eigen::Vector3f translation_remote(object_pos_or[0], object_pos_or[1], object_pos_or[2]);
+        Eigen::Matrix<float, 3, 3> rotation_remote = Eigen::Matrix<float, 3, 3>::Identity();
+
+        Eigen::Vector3f p_remote;
+        get_new_point(p, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote, p_remote);
+
+        //print p_remote
+        std::cout << "p_remote: " << p_remote << std::endl;
+
 
         // Logging over ROS2.
         auto msg_send = custom_controller_interfaces::msg::LogMsg();

@@ -72,8 +72,8 @@ private:
         auto msg = geometry_msgs::msg::PoseStamped();
         msg.header.frame_id = "world";
         msg.header.stamp = this->get_clock()->now();
-        // msg.pose.position.y = x / 4000.f;
-        msg.pose.position.y = 0.f;
+        msg.pose.position.y = x / 4000.f;
+        // msg.pose.position.y = 0.f;
         msg.pose.position.x = 0.f;
         msg.pose.position.z = 0.f;
         msg.pose.orientation.x = x_;
