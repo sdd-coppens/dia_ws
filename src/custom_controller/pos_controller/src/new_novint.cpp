@@ -165,10 +165,11 @@ public:
         };
 
         for (int i = 0; i < 12; ++i) {
+            Eigen::Matrix3f triangle;
             for (int j = 0; j < 3; ++j) {
-                triangle_indices[i].col(j) = cube_points[triangle_indices[i][j]];
+                triangle.col(j) = cube_points[triangle_indices[i][j]];
             }
-            triangles.push_back(cube_triangles[i]);
+            triangles.push_back(triangle);
         }
     }
 
