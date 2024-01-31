@@ -126,74 +126,50 @@ public:
 
         demo_object_pose_ = {0.f, 0.f, 0.f};
 
-        // funky eigen stuff
-        cube_points[0] = Eigen::Vector3f(0.0f, 0.0f, 0.0f);
-        cube_points[1] = Eigen::Vector3f(1.0f, 0.0f, 0.0f);
-        cube_points[2] = Eigen::Vector3f(0.0f, 1.0f, 0.0f);
-        cube_points[3] = Eigen::Vector3f(1.0f, 1.0f, 0.0f);
-        cube_points[4] = Eigen::Vector3f(0.0f, 0.0f, 1.0f);
-        cube_points[5] = Eigen::Vector3f(1.0f, 0.0f, 1.0f);
-        cube_points[6] = Eigen::Vector3f(0.0f, 1.0f, 1.0f);
-        cube_points[7] = Eigen::Vector3f(1.0f, 1.0f, 1.0f);
 
+        /* rectangle points
+         *
+             7--------6
+            /|       /|
+           / |      / |
+          4--------5  |
+          |  |     |  |
+          |  3-----|--2
+          | /      | /
+          |/       |/
+          0--------1
 
-        cube_triangles[0].col(0) = cube_points[0];
-        cube_triangles[0].col(1) = cube_points[1];
-        cube_triangles[0].col(2) = cube_points[2];
+         coordinate system
+          z    y
+          |  /
+          | /
+          |/
+          o------> x
 
-        cube_triangles[1].col(0) = cube_points[1];
-        cube_triangles[1].col(1) = cube_points[2];
-        cube_triangles[1].col(2) = cube_points[3];
+          a point (x, y, z) is (right, backward, up)
 
-        cube_triangles[2].col(0) = cube_points[0];
-        cube_triangles[2].col(1) = cube_points[1];
-        cube_triangles[2].col(2) = cube_points[4];
+         */
 
-        cube_triangles[3].col(0) = cube_points[1];
-        cube_triangles[3].col(1) = cube_points[4];
-        cube_triangles[3].col(2) = cube_points[5];
+        // Initialize cube_points with an initializer list
+        Eigen::Vector3f cube_points[] = {
+                {0.0f, 0.0f, 0.0f}, {3.0f, 0.0f, 0.0f}, {0.0f, 2.27f, 0.0f},
+                {3.0f, 2.27f, 0.0f}, {0.0f, 0.0f, 0.07f}, {3.0f, 0.0f, 0.07f},
+                {0.0f, 2.27f, 0.07f}, {3.0f, 2.27f, 0.07f}
+        };
 
-        cube_triangles[4].col(0) = cube_points[0];
-        cube_triangles[4].col(1) = cube_points[2];
-        cube_triangles[4].col(2) = cube_points[4];
+        // Define a mapping from points to triangles
+        int triangle_indices[][3] = {
+                {0, 1, 2}, {1, 2, 3}, {0, 1, 4}, {1, 4, 5},
+                {0, 2, 4}, {2, 4, 6}, {1, 3, 5}, {3, 5, 7},
+                {2, 3, 6}, {3, 6, 7}, {4, 5, 6}, {5, 6, 7}
+        };
 
-        cube_triangles[5].col(0) = cube_points[2];
-        cube_triangles[5].col(1) = cube_points[4];
-        cube_triangles[5].col(2) = cube_points[6];
-
-        cube_triangles[6].col(0) = cube_points[1];
-        cube_triangles[6].col(1) = cube_points[3];
-        cube_triangles[6].col(2) = cube_points[5];
-
-        cube_triangles[7].col(0) = cube_points[3];
-        cube_triangles[7].col(1) = cube_points[5];
-        cube_triangles[7].col(2) = cube_points[7];
-
-        cube_triangles[8].col(0) = cube_points[2];
-        cube_triangles[8].col(1) = cube_points[3];
-        cube_triangles[8].col(2) = cube_points[6];
-
-        cube_triangles[9].col(0) = cube_points[3];
-        cube_triangles[9].col(1) = cube_points[6];
-        cube_triangles[9].col(2) = cube_points[7];
-
-        cube_triangles[10].col(0) = cube_points[4];
-        cube_triangles[10].col(1) = cube_points[5];
-        cube_triangles[10].col(2) = cube_points[6];
-
-        cube_triangles[11].col(0) = cube_points[5];
-        cube_triangles[11].col(1) = cube_points[6];
-        cube_triangles[11].col(2) = cube_points[7];
-
-
-        triangles.push_back(cube_triangles[0]);
-        triangles.push_back(cube_triangles[1]);
-        triangles.push_back(cube_triangles[2]);
-        triangles.push_back(cube_triangles[3]);
-        triangles.push_back(cube_triangles[4]);
-        triangles.push_back(cube_triangles[5]);
-        triangles.push_back(cube_triangles[6]);
-        triangles.push_back(cube_triangles[7]);
+        for (int i = 0; i < 12; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                triangle_indices[i].col(j) = cube_points[triangle_indices[i][j]];
+            }
+            triangles.push_back(cube_triangles[i]);
+        }
     }
 
     ~JogController() {
