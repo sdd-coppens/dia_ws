@@ -16,12 +16,12 @@ def generate_launch_description():
             executable='sender',
             name='sender'
         ),
-        Node(
-            package='pos_controller',
-            namespace='pos_controller1',
-            executable='operator_domain_manip',
-            name='operator_domain_manip'
-        ),
+        # Node(
+        #     package='pos_controller',
+        #     namespace='pos_controller1',
+        #     executable='operator_domain_manip',
+        #     name='operator_domain_manip'
+        # ),
         # Node(
         #     package='pos_controller',
         #     namespace='pos_controller2',

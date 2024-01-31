@@ -72,9 +72,9 @@ private:
         auto msg = geometry_msgs::msg::PoseStamped();
         msg.header.frame_id = "world";
         msg.header.stamp = this->get_clock()->now();
-        msg.pose.position.x = x / 4000.f;
+        // msg.pose.position.y = x / 4000.f;
         msg.pose.position.y = 0.f;
-//        msg.pose.position.y = x / 4000.f;
+        msg.pose.position.x = 0.f;
         msg.pose.position.z = 0.f;
         msg.pose.orientation.x = x_;
         // msg.pose.orientation.y = x / 8000.f;
@@ -85,7 +85,8 @@ private:
         // msg.pose.orientation.w = 2000 / 8000.f;
         msg.pose.orientation.w = w_;
 
-        std::array<float, 4> normalized_quat = normalize(msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w);
+        // Swap around y and z due to coordinate system differences.
+        std::array<float, 4> normalized_quat = normalize(msg.pose.orientation.x, msg.pose.orientation.z, msg.pose.orientation.y, msg.pose.orientation.w);
         msg.pose.orientation.x = normalized_quat[0];
         msg.pose.orientation.y = normalized_quat[1];
         msg.pose.orientation.z = normalized_quat[2];
