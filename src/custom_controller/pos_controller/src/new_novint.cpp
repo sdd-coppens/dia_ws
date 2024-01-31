@@ -465,15 +465,10 @@ private:
             sleep_milliseconds(100);
         }
 
-        fp32 *curr_pos = static_cast<fp32 *>(malloc(6 * sizeof(fp32)));
-        arm->get_position(curr_pos);
 
-        std::array<fp32, 6> input = compute_input(novint_input);
-        fp32 poses[6];
-        std::copy(input.begin(), input.end(), poses);
 
         //warping
-        Eigen::Vector3f p(poses[0], poses[1], poses[2]); //todo: check the scaling of these
+        Eigen::Vector3f p(novint_input[0], novint_input[1], novint_input[2]); //todo: Check the scaling of these
 
         Eigen::Vector3f translation_operator(demo_object_pose_[0], demo_object_pose_[1], demo_object_pose_[2]);
         Eigen::Matrix3f rotation_operator;
@@ -493,9 +488,7 @@ private:
         get_new_point(p, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote,
                       p_remote);
 
-        //print p_remote
-
-        //Print inputs
+        //print
         std::cout << "------[ warping ]------" << std::endl;
         std::cout << "input: " << std::endl;
         std::cout << "\t" << "novint_input: " << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2]
@@ -508,9 +501,15 @@ private:
         std::cout << "output: " << std::endl;
         std::cout << "\t" << "p_remote: " << p_remote << std::endl;
 
-        poses[0] = p_remote[0];
-        poses[1] = p_remote[1];
-        poses[2] = p_remote[2];
+
+        //Convert to mm and add offsets
+        fp32 *curr_pos = static_cast<fp32 *>(malloc(6 * sizeof(fp32)));
+        arm->get_position(curr_pos);
+
+        std::array<fp32, 3> p_remote_array = {p_remote[0], p_remote[1], p_remote[2]};
+        std::array<fp32, 6> input = compute_input(p_remote_array);
+        fp32 poses[6];
+        std::copy(input.begin(), input.end(), poses);
 
         // Calculate and apply control signal.
         std::array<fp32, 3> control_signal;
