@@ -100,8 +100,8 @@ void ReceiverNode::publishProxyForce(float x, float y, float z) {
     double scalingFactor = this->get_parameter("force_scale").as_double();
     //Scale and convert coordinate frames (x = -x and y,z = z,y)
     forceMessage.wrench.force.x = scalingFactor * x;
-    forceMessage.wrench.force.y = -scalingFactor * z;
-    forceMessage.wrench.force.z = scalingFactor * y;
+    forceMessage.wrench.force.y = scalingFactor * y;
+    forceMessage.wrench.force.z = scalingFactor * z;
 
     double maxForce = this->get_parameter("max_force").as_double();
     if (forceMessage.wrench.force.z > maxForce) {
@@ -125,26 +125,16 @@ geometry_msgs::msg::PoseStamped ReceiverNode::getPoseStamptedMessage(float x, fl
     message.pose.position = geometry_msgs::msg::Point();
     //Scale and convert coordinate frames (x = -x and y,z = z,y)
     double scalingFactor = this->get_parameter("pos_scale").as_double();
-    // message.pose.position.x = -scalingFactor*x;
-    // message.pose.position.y = scalingFactor*z;
-    // message.pose.position.z = scalingFactor*y;
 
-
-
-    // Coordinate fuckery
     message.pose.position.x = scalingFactor*x;
     message.pose.position.y = scalingFactor*y;
     message.pose.position.z = scalingFactor*z;
 
+    message.pose.orientation = geometry_msgs::msg::Quaternion();
+    message.pose.orientation.x = qx;
+    message.pose.orientation.y = qy;
+    message.pose.orientation.z = qz;
+    message.pose.orientation.w = qw;
 
-    // message.pose.position.x = scalingFactor*x;
-    // message.pose.position.y = -scalingFactor*z;
-    // message.pose.position.z = scalingFactor*y;
-
-
-
-
-
-    //TODO: Currently no need for rotation but will have to be added.   
     return message;
 }

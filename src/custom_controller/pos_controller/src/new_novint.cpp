@@ -271,11 +271,11 @@ private:
         m.getRPY(roll, pitch, yaw);
 
         // TODO: Temporary testing
-        tf2::Vector3 plane_normal(0.f, 0.f, 1.f);
+        tf2::Vector3 plane_normal(0.f, 1.f, 0.f);
         tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
         // std::cout << "plane normal rot: " << plane_normal_rot[0] << ", " << plane_normal_rot[1] << ", " << plane_normal_rot[2] << std::endl;
         // wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0])+","+std::to_string(plane_normal_rot[1]));
-        wificom.sendMessageToArduino(std::to_string(plane_normal_rot[0]) + "," + std::to_string(-plane_normal_rot[1]));
+        wificom.sendMessageToArduino(std::to_string(plane_normal_rot[0]) + "," + std::to_string(plane_normal_rot[2]));
 
         object_pos_or[0] = msg->pose.position.x;
         object_pos_or[1] = msg->pose.position.y;
