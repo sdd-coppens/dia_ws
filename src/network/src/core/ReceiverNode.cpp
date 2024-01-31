@@ -18,6 +18,7 @@ ReceiverNode::ReceiverNode(int srcPort, std::string dstIp, std::string dstPort):
                                              this->get_parameter("dst_ip").as_string().data(),
                                              this->get_parameter("dst_port").as_string().data()) ;
 
+
     // Setup publishers
     this->proxyPosPublisher = this->create_publisher<geometry_msgs::msg::PoseStamped>("/proxy/pose", 10);
     this->objectPosPublisher = this->create_publisher<geometry_msgs::msg::PoseStamped>("/demo_object/pose", 10);

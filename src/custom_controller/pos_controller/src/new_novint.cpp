@@ -14,8 +14,8 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Matrix3x3.h"
 
+#include "util/coordinate_conversions.hpp"
 #include "util/wifi_communicator/WifiCommunicator.hpp"
-
 #include "util/perturb/PerturbMotion.hpp"
 
 
@@ -37,19 +37,19 @@ public:
         declare_parameter("k_p", 0.2f);
         declare_parameter("k_d", 0.5f);
 
-        declare_parameter("x_scaling", 100.f);
+//        declare_parameter("x_scaling", 100.f);
         declare_parameter("x_offset", 250.f);
-        declare_parameter("y_scaling", -60.f);
-        declare_parameter("z_scaling", 60.f);
+//        declare_parameter("y_scaling", -60.f);
+//        declare_parameter("z_scaling", 60.f);
         declare_parameter("z_offset", 125.f);
 
         get_parameter("use_pd", use_pd_);
         get_parameter("k_p", k_p_);
         get_parameter("k_d", k_d_);
-        get_parameter("x_scaling", x_scaling_);
+//        get_parameter("x_scaling", x_scaling_);
         get_parameter("x_offset", x_offset_);
-        get_parameter("y_scaling", y_scaling_);
-        get_parameter("z_scaling", z_scaling_);
+//        get_parameter("y_scaling", y_scaling_);
+//        get_parameter("z_scaling", z_scaling_);
         get_parameter("z_offset", z_offset_);
 
         printf("use_pd: %s\n", use_pd_ ? "true" : "false");
@@ -57,10 +57,10 @@ public:
             printf("k_p: %f\n", k_p_);
             printf("k_d: %f\n", k_d_);
         }
-        printf("x_scaling: %f\n", x_scaling_);
+//        printf("x_scaling: %f\n", x_scaling_);
         printf("x_offset: %f\n", x_offset_);
-        printf("y_scaling: %f\n", y_scaling_);
-        printf("z_scaling: %f\n", z_scaling_);
+//        printf("y_scaling: %f\n", y_scaling_);
+//        printf("z_scaling: %f\n", z_scaling_);
         printf("z_offset: %f\n", z_offset_);
 
         first_callback_ = true;
@@ -152,9 +152,9 @@ public:
 
         // Initialize cube_points with an initializer list
         Eigen::Vector3f cube_points[] = {
-                {0.0f, 0.0f, 0.0f}, {3.0f, 0.0f, 0.0f}, {0.0f, 2.27f, 0.0f},
-                {3.0f, 2.27f, 0.0f}, {0.0f, 0.0f, 0.07f}, {3.0f, 0.0f, 0.07f},
-                {0.0f, 2.27f, 0.07f}, {3.0f, 2.27f, 0.07f}
+                {-1.0f, -1.0f, -0.035f}, {1.0f, -1.0f, -0.035f}, {-1.0f, 1.0f, -0.035f},
+                {1.0f, 1.0f, -0.035f}, {-1.0f, -1.0f, 0.035f}, {1.0f, -1.0f, 0.035f},
+                {-1.0f, 1.0f, 0.035f}, {1.0f, 1.0f, 0.035f}
         };
 
         // Define a mapping from points to triangles
@@ -194,10 +194,10 @@ private:
     fp32 k_d_;
 
     fp32 x_offset_;
-    fp32 x_scaling_;
-    fp32 y_scaling_;
+//    fp32 x_scaling_;
+//    fp32 y_scaling_;
     fp32 z_offset_;
-    fp32 z_scaling_;
+//    fp32 z_scaling_;
 
     std::array<fp32, 6> object_pos_or;
 
@@ -215,7 +215,7 @@ private:
     rclcpp::Publisher<custom_controller_interfaces::msg::LogMsg>::SharedPtr publisher_;
     rclcpp::Publisher<std_msgs::msg::String>::SharedPtr sync_signal_pub_;
 
-    //Make get the 8 poitns of a 1x1x1 cube
+    //Make get the 8 points of a rectangle
     Eigen::Vector3f cube_points[8];
 
     //Make get the 12 triangles of a 1x1x1 cube
@@ -260,33 +260,15 @@ private:
     }
 
     void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
-        // tf2::Quaternion q(
-        //     msg->pose.orientation.x,
-        //     msg->pose.orientation.y,
-        //     msg->pose.orientation.z,
-        //     msg->pose.orientation.w);
-
-        // TESTING
         tf2::Quaternion q(
                 msg->pose.orientation.x,
-                msg->pose.orientation.z,
                 msg->pose.orientation.y,
+                msg->pose.orientation.z,
                 msg->pose.orientation.w);
 
         tf2::Matrix3x3 m(q);
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
-
-        // coordinate fun
-        tf2::Vector3 corner0_operator_coord_system(whiteboard_l_ / 2.f, 0.f, whiteboard_w_ / 2.f);
-        tf2::Vector3 corner1_operator_coord_system(whiteboard_l_ / 2.f, 0.f, -whiteboard_w_ / 2.f);
-        tf2::Vector3 corner2_operator_coord_system(-whiteboard_l_ / 2.f, 0.f, -whiteboard_w_ / 2.f);
-        tf2::Vector3 corner3_operator_coord_system(-whiteboard_l_ / 2.f, 0.f, whiteboard_w_ / 2.f);
-
-        tf2::Vector3 corner_rotated0_operator_coord_system = tf2::quatRotate(q, corner0_operator_coord_system);
-        tf2::Vector3 corner_rotated1_operator_coord_system = tf2::quatRotate(q, corner1_operator_coord_system);
-        tf2::Vector3 corner_rotated2_operator_coord_system = tf2::quatRotate(q, corner2_operator_coord_system);
-        tf2::Vector3 corner_rotated3_operator_coord_system = tf2::quatRotate(q, corner3_operator_coord_system);
 
         // TODO: Temporary testing
         tf2::Vector3 plane_normal(0.f, 0.f, 1.f);
@@ -295,31 +277,8 @@ private:
         // wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0])+","+std::to_string(plane_normal_rot[1]));
         wificom.sendMessageToArduino(std::to_string(plane_normal_rot[0]) + "," + std::to_string(-plane_normal_rot[1]));
 
-        // See readme
-        tf2::Vector3 corner_rotated0_remote_system(-corner_rotated0_operator_coord_system[2],
-                                                   corner_rotated0_operator_coord_system[0],
-                                                   corner_rotated0_operator_coord_system[1]);
-        tf2::Vector3 corner_rotated1_remote_system(-corner_rotated1_operator_coord_system[2],
-                                                   corner_rotated1_operator_coord_system[0],
-                                                   corner_rotated1_operator_coord_system[1]);
-        tf2::Vector3 corner_rotated2_remote_system(-corner_rotated2_operator_coord_system[2],
-                                                   corner_rotated2_operator_coord_system[0],
-                                                   corner_rotated2_operator_coord_system[1]);
-        tf2::Vector3 corner_rotated3_remote_system(-corner_rotated3_operator_coord_system[2],
-                                                   corner_rotated3_operator_coord_system[0],
-                                                   corner_rotated3_operator_coord_system[1]);
-
-        whiteboard_corners_rotated_[0] = corner_rotated0_remote_system;
-        whiteboard_corners_rotated_[1] = corner_rotated1_remote_system;
-        whiteboard_corners_rotated_[2] = corner_rotated2_remote_system;
-        whiteboard_corners_rotated_[3] = corner_rotated3_remote_system;
-
-        // TODO: possibly (likely) wrong
-        // object_pos_or[0] = msg->pose.position.y * x_scaling_;
-        // object_pos_or[1] = msg->pose.position.x * y_scaling_;
-        // object_pos_or[2] = msg->pose.position.z * z_scaling_;
-        object_pos_or[0] = msg->pose.position.y;
-        object_pos_or[1] = msg->pose.position.x;
+        object_pos_or[0] = msg->pose.position.x;
+        object_pos_or[1] = msg->pose.position.y;
         object_pos_or[2] = msg->pose.position.z;
         object_pos_or[3] = roll * 180.f / M_PI;
         object_pos_or[4] = pitch * 180.f / M_PI;
@@ -397,7 +356,7 @@ private:
                                                                 tf2::Vector3(novint_input[0], novint_input[1], 0));
 
             fp32 max_corner_alt = -9999.f;
-            for (int i = 0; i < whiteboard_corners_rotated_.size(); i++) {
+            for (size_t i = 0; i < whiteboard_corners_rotated_.size(); i++) {
                 if (whiteboard_corners_rotated_[i][2] >= max_corner_alt) {
                     max_corner_alt = whiteboard_corners_rotated_[i][2];
                 }
@@ -407,26 +366,26 @@ private:
     }
 
     std::array<fp32, 6> compute_input(std::array<fp32, 3> novint_input) {
-        fp32 z_val = z_offset_ + novint_input[2] * z_scaling_;
-        if (use_geofencing_) {
-            fp32 z_geofenced = calc_min_z_geofencing(novint_input);
-            if (z_geofenced != -1.f) {
-                if (z_val < (z_geofenced - geofencing_offset_) * z_scaling_ + z_offset_ + geofencing_offset_) {
-                    z_val = (z_geofenced - geofencing_offset_) * z_scaling_ + z_offset_ + geofencing_offset_;
-                }
-            }
-        }
+        fp32 z_val = z_offset_ + novint_input[2];
+//        if (use_geofencing_) {
+//            fp32 z_geofenced = calc_min_z_geofencing(novint_input);
+//            if (z_geofenced != -1.f) {
+//                if (z_val < (z_geofenced - geofencing_offset_) + geofencing_offset_) {
+//                    z_val = (z_geofenced - geofencing_offset_) + geofencing_offset_;
+//                }
+//            }
+//        }
         if (turn_attachment_) {
-            return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_val,
+            return {x_offset_ + novint_input[0] , novint_input[1] , z_val,
                     180.f + object_pos_or[1], 0.f + object_pos_or[0], 0.f};
         } else {
-            return {x_offset_ + novint_input[0] * x_scaling_, novint_input[1] * y_scaling_, z_val, 180.f, 0.f, 0.f};
+            return {x_offset_ + novint_input[0], novint_input[1], z_val, 180.f, 0.f, 0.f};
         }
     }
 
     void topic_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         // See readme.
-        std::array<fp32, 3> novint_input = {-msg->pose.position.z, msg->pose.position.x, msg->pose.position.y};
+        std::array<fp32, 3> novint_input = {msg->pose.position.x, msg->pose.position.y, msg->pose.position.z};
 
         // Moves robot to initial position in positioning mode so it doesn't overspeed itself.
         if (first_callback_) {
@@ -441,8 +400,6 @@ private:
             first_callback_ = false;
             sleep_milliseconds(100);
         }
-
-
 
         //warping
         Eigen::Vector3f p(novint_input[0], novint_input[1], novint_input[2]); //todo: Check the scaling of these
@@ -479,11 +436,15 @@ private:
         std::cout << "\t" << "p_remote: " << p_remote << std::endl;
 
 
-        //Convert to mm and add offsets
+        //Working in robot coordinates from here
+        std::array<fp32, 3> p_remote_array;
+        std::array<fp32, 3> fp32_p_remote = {p_remote[0], p_remote[1], p_remote[2]};
+        world_to_robot(fp32_p_remote, p_remote_array);
+
         fp32 *curr_pos = static_cast<fp32 *>(malloc(6 * sizeof(fp32)));
         arm->get_position(curr_pos);
 
-        std::array<fp32, 3> p_remote_array = {p_remote[0], p_remote[1], p_remote[2]};
+        //TODO: check this
         std::array<fp32, 6> input = compute_input(p_remote_array);
         fp32 poses[6];
         std::copy(input.begin(), input.end(), poses);
@@ -518,6 +479,8 @@ private:
 
         // Logging to csv.
         rclcpp::Time time_stamp = this->now();
+
+        std::cout << "pose: " << poses[0] << ", " << poses[1] << ", " << poses[2] << std::endl;
 
         // Set arm position at 250Hz.
         int ret = arm->set_servo_cartesian(poses, 1);

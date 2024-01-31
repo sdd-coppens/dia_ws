@@ -53,8 +53,8 @@ void SenderNode::endEffectorPoseCallback(const geometry_msgs::msg::PoseStamped& 
     //Scale and change coordinate frame (x = -x, and y,z = z,y)
     double scalingFactor = this->get_parameter("pos_scale").as_double(); 
     this->msgData.proxy_position[0] = scalingFactor*endEffectorPose.pose.position.x;
-    this->msgData.proxy_position[1] = scalingFactor*endEffectorPose.pose.position.z;
-    this->msgData.proxy_position[2] = -scalingFactor*endEffectorPose.pose.position.y;
+    this->msgData.proxy_position[1] = scalingFactor*endEffectorPose.pose.position.y;
+    this->msgData.proxy_position[2] = scalingFactor*endEffectorPose.pose.position.z;
     //TODO this will most likely need a conversion
     this->msgData.proxy_orientation[0] = endEffectorPose.pose.orientation.x;
     this->msgData.proxy_orientation[1] = endEffectorPose.pose.orientation.y;
@@ -72,8 +72,8 @@ void SenderNode::objectPoseCallback(const geometry_msgs::msg::PoseStamped& objec
     //Scale and change coordinate frame (x = -x, and y,z = z,y)
     double scalingFactor = this->get_parameter("pos_scale").as_double(); 
     this->msgData.objects[0].position[0] = scalingFactor*objectPoseMessage.pose.position.x;
-    this->msgData.objects[0].position[1] = scalingFactor*objectPoseMessage.pose.position.z;
-    this->msgData.objects[0].position[2] = -scalingFactor*objectPoseMessage.pose.position.y;
+    this->msgData.objects[0].position[1] = scalingFactor*objectPoseMessage.pose.position.y;
+    this->msgData.objects[0].position[2] = scalingFactor*objectPoseMessage.pose.position.z;
     //TODO this will most likely need a conversion
     this->msgData.objects[0].orientation[0] = objectPoseMessage.pose.orientation.x;
     this->msgData.objects[0].orientation[1] = objectPoseMessage.pose.orientation.y;
@@ -98,8 +98,8 @@ void SenderNode::endEffectorForceCallback(const geometry_msgs::msg::Vector3Stamp
     //Scale and change coordinate frame (x = -x, and y,z = z,y)
     double scalingFactor = this->get_parameter("force_scale").as_double();
     this->msgData.proxy_force[0] = scalingFactor*endEffectorForce.vector.x;
-    this->msgData.proxy_force[1] = scalingFactor*endEffectorForce.vector.z;
-    this->msgData.proxy_force[2] = -scalingFactor*endEffectorForce.vector.y;
+    this->msgData.proxy_force[1] = scalingFactor*endEffectorForce.vector.y;
+    this->msgData.proxy_force[2] = scalingFactor*endEffectorForce.vector.z;
 
     this->writeToConnection();
 }
