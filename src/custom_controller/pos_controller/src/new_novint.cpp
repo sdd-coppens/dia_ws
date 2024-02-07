@@ -17,6 +17,7 @@
 #include "util/coordinate_conversions.hpp"
 #include "util/wifi_communicator/WifiCommunicator.hpp"
 #include "util/perturb/PerturbMotion.hpp"
+#include "util/kinematics_platform/Kinematics.hpp"
 
 
 class JogController : public rclcpp::Node {
@@ -183,7 +184,7 @@ public:
     }
 
 private:
-    WifiCommunicator wificom = WifiCommunicator("192.168.1.134");
+    Machine machine = Machine(2.f, 3.125f, 1.75f, 3.669291339f);
 
     fp32 whiteboard_l_;
     fp32 whiteboard_w_;
@@ -255,7 +256,6 @@ private:
 
     // Keyboard listener.
     void keyboard_callback(const std_msgs::msg::String::SharedPtr msg) {
-        wificom.sendMessageToArduino("0.1023,0.1");
         // placeholder empty
     }
 
@@ -269,13 +269,6 @@ private:
         tf2::Matrix3x3 m(q);
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
-
-        // TODO: Temporary testing
-        tf2::Vector3 plane_normal(0.f, 1.f, 0.f);
-        tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
-        // std::cout << "plane normal rot: " << plane_normal_rot[0] << ", " << plane_normal_rot[1] << ", " << plane_normal_rot[2] << std::endl;
-        // wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0])+","+std::to_string(plane_normal_rot[1]));
-        wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0]) + "," + std::to_string(plane_normal_rot[2]));
 
         object_pos_or[0] = msg->pose.position.x;
         object_pos_or[1] = msg->pose.position.y;
@@ -304,7 +297,6 @@ private:
         demo_object_pose_[3] = roll * 180.f / M_PI;
         demo_object_pose_[4] = pitch * 180.f / M_PI;
         demo_object_pose_[5] = yaw * 180.f / M_PI;
-        std::cout << demo_object_pose_[0] << ", " << demo_object_pose_[1] << ", " << demo_object_pose_[2] << std::endl;
     }
 
     fp32 calc_min_z_geofencing(std::array<fp32, 3> novint_input) {
@@ -334,17 +326,6 @@ private:
                                  (novint_input[1] - whiteboard_corners_rotated_[3][1])
                                  - (novint_input[0] - whiteboard_corners_rotated_[3][0]) *
                                    (whiteboard_corners_rotated_[0][1] - whiteboard_corners_rotated_[3][1]);
-
-
-        // std::cout << "------------------------------------\n";
-        // std::cout << "novint: (" << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2] << ")\n";
-        // for (int i = 0; i < whiteboard_corners_rotated_.size(); i++) {
-        //     std::cout << "corner" << i << ": (" << whiteboard_corners_rotated_[i][0] << ", " << whiteboard_corners_rotated_[i][1] << ", " << whiteboard_corners_rotated_[i][2] << ")\n";
-        // }
-        // std::cout << "d_corner0_corner1 " << d_corner0_corner1 << std::endl;
-        // std::cout << "d_corner1_corner2 " << d_corner1_corner2 << std::endl;
-        // std::cout << "d_corner2_corner3 " << d_corner2_corner3 << std::endl;
-        // std::cout << "d_corner3_corner0 " << d_corner3_corner0 << std::endl;
 
         if (d_corner0_corner1 >= 0.f && d_corner1_corner2 >= 0.f && d_corner2_corner3 >= 0.f &&
             d_corner3_corner0 >= 0.f) {
@@ -423,6 +404,7 @@ private:
                       p_remote);
 
         //print
+        #if false
         std::cout << "------[ warping ]------" << std::endl;
         std::cout << "input: " << std::endl;
         std::cout << "\t" << "novint_input: " << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2]
@@ -434,6 +416,7 @@ private:
         std::cout << "\t" << "rotation_remote:\n" << rotation_remote << std::endl;
         std::cout << "output: " << std::endl;
         std::cout << "\t" << "p_remote: " << p_remote << std::endl;
+        #endif
 
 
         //Working in robot coordinates from here
@@ -479,8 +462,6 @@ private:
 
         // Logging to csv.
         rclcpp::Time time_stamp = this->now();
-
-        std::cout << "pose: " << poses[0] << ", " << poses[1] << ", " << poses[2] << std::endl;
 
         // Set arm position at 250Hz.
         int ret = arm->set_servo_cartesian(poses, 1);

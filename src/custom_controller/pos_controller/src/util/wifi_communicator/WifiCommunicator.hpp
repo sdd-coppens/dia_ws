@@ -6,6 +6,8 @@
 #include <string>
 #include <iostream>
 
+#include <fcntl.h> 
+#include <errno.h>
 
 #define RECV_PORT 5678
 
@@ -72,6 +74,18 @@ class WifiCommunicator{
             return 0;
         }
 
+        int makeSocketNonBlocking() {
+            int flags = fcntl(this->sock, F_GETFL, 0);
+            if (flags == -1) {
+                return -1; 
+            }
+            flags |= O_NONBLOCK;
+            if (fcntl(this->sock, F_SETFL, flags) == -1) {
+                return -1; 
+            }
+            return 0;
+        }
+
 
     public:
 
@@ -86,6 +100,8 @@ class WifiCommunicator{
             bindSocket();
             setupArduinoAdress();
             sendMessageToArduino(startCommandArduino); // Send out the start signal to
+
+            this->makeSocketNonBlocking();
         }
 
         int sendMessageToArduino(std::string message){
@@ -104,6 +120,20 @@ class WifiCommunicator{
                 return 1;
             }
             return 0;
+        }
+
+        int receiveMessageFromArduinoNEW(uint8_t * buffer, size_t buffSize) {
+            ssize_t bytes_received = recvfrom(this->sock, buffer, buffSize, 0, (struct sockaddr *)&this->sender, &this->sender_length);
+            if (bytes_received < 0) {
+                if (errno == EWOULDBLOCK || errno == EAGAIN) {
+                    // No data available right now, non-blocking return
+                    return -2; 
+                } else {
+                    std::cerr << "Failed to receive data from Arduino" << std::endl;
+                    return -1; // An error occurred
+                }
+            }
+            return 0; // Data received successfully
         }
 };
 

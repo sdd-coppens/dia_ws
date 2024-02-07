@@ -47,6 +47,9 @@ ament_target_dependencies(operator_domain_manip rclcpp custom_controller_interfa
 add_executable(spinning src/spinning.cpp)
 ament_target_dependencies(spinning rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs)
 
+add_executable(arduino_angle_listener src/arduino_angle_listener.cpp)
+ament_target_dependencies(arduino_angle_listener rclcpp xarm_sdk std_msgs geometry_msgs custom_controller_interfaces tf2 tf2_ros)
+
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -59,6 +62,7 @@ install(TARGETS
   operator_domain_manip
   spinning
   compliant_loadcell
+  arduino_angle_listener
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

@@ -81,10 +81,22 @@ public:
         compliant_loadcell_log.open("compliant_loadcell_log.csv");
         compliant_loadcell_log << "time, loadcell_vec_x, loadcell_vec_y, robot_pos_x, robot_pos_y\n";
 
+        uint32_t prev_msg = 0u;
+        rclcpp::Time loop_tick = this->now();
+
         while (rclcpp::ok()) {
+            rclcpp::Time time_stamp = this->now();
             SensorOutputLoadCell loadcellMsg;
-            wificom.receiveMessageFromArduino(sensorOutputBuffer, sizeof(loadcellMsg));
+            wificom.receiveMessageFromArduinoNEW(sensorOutputBuffer, sizeof(loadcellMsg));
             std::memcpy(&loadcellMsg, sensorOutputBuffer, sizeof(loadcellMsg));
+
+            bool isEmpty = (loadcellMsg.values[0] == 0) && (loadcellMsg.values[1] == 0) && (loadcellMsg.values[2] == 0) && (loadcellMsg.values[3] == 0);
+            if ((prev_msg == loadcellMsg.timestamp) || isEmpty) {
+                continue;
+            }
+            prev_msg = loadcellMsg.timestamp;
+            loop_tick = time_stamp;
+
             queue_lc_0.push_back(loadcellMsg.values[0]);
             queue_lc_1.push_back(loadcellMsg.values[1]);
             queue_lc_2.push_back(loadcellMsg.values[2]);
@@ -155,6 +167,8 @@ public:
                 // Resulting vector:
                 float res_vec_x = (lc_3_avg - lc_3_rest) - (lc_0_avg - lc_0_rest);
                 float res_vec_y = (lc_1_avg - lc_1_rest) - (lc_2_avg - lc_2_rest);
+
+                std::cout << res_vec_x << ", " << res_vec_y << std::endl;
                 
                 // Attempt at Z axis, possibly useful for later.
                 float Z_CHANGE = 0.f;
@@ -189,7 +203,6 @@ public:
                 poses[2] = curr_pos[2] + control_signal[2];
 
                 // Log to csv.
-                rclcpp::Time time_stamp = this->now();
                 compliant_loadcell_log << time_stamp.nanoseconds() << ", " << res_vec_x << ", " << res_vec_y << ", " << curr_pos[0] << ", " << curr_pos[1] << std::endl;
 
                 int ret = arm->set_servo_cartesian(poses, 1);
