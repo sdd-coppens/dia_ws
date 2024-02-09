@@ -18,7 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LogMsg.msg"
   "msg/LCMsg.msg"
   "msg/VecPredictMsg.msg"
-  "srv/VectorPredictionLC.srv"
+  "srv/VectorPredictionFK.srv"
  )
 
 

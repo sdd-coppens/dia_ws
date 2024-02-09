@@ -4,7 +4,7 @@
 
 #include "geometry_msgs/msg/pose_stamped.hpp"
 
-#include "custom_controller_interfaces/srv/vector_prediction_lc.hpp"
+#include "custom_controller_interfaces/srv/vector_prediction_fk.hpp"
 
 #include "custom_controller_interfaces/msg/lc_msg.hpp"
 #include "custom_controller_interfaces/msg/vec_predict_msg.hpp"
@@ -43,11 +43,14 @@ public:
         temp_bool = false;
         subscription_keyboard_ = this->create_subscription<std_msgs::msg::String>("/keyboard", 10, std::bind(
             &PlatformCommunicator::keyboard_callback, this, std::placeholders::_1));
-        timer_ = this->create_wall_timer(1ms, std::bind(&PlatformCommunicator::timer_callback, this));
-
         subscription_object_pose_ =
                 this->create_subscription<geometry_msgs::msg::PoseStamped>("/object/pose", 10, std::bind(
-                        &PlatformCommunicator::object_pose_callback, this, std::placeholders::_1));           
+                        &PlatformCommunicator::object_pose_callback, this, std::placeholders::_1));
+
+        fk_service_client_ =
+            this->create_client<custom_controller_interfaces::srv::VectorPredictionFK>("vector_prediction_fk");
+
+        timer_ = this->create_wall_timer(1ms, std::bind(&PlatformCommunicator::timer_callback, this));
     }
 
     ~PlatformCommunicator() {
@@ -58,9 +61,9 @@ private:
     uint8_t motorAngleOutputBuffer[10];
     uint32_t prev_msg_time;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_keyboard_;
-    rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_object_pose_;
-
+    rclcpp::Client<custom_controller_interfaces::srv::VectorPredictionFK>::SharedPtr fk_service_client_;
+    rclcpp::TimerBase::SharedPtr timer_;
     bool temp_bool;
     WifiCommunicator wificom = WifiCommunicator("192.168.1.134");
 
@@ -88,14 +91,26 @@ private:
         temp_bool = !temp_bool;
     }
 
-    void timer_callback()
-    {
+    void timer_callback() {
         MotorAngleOutput motorAngleMsg;
-        wificom.receiveMessageFromArduinoNEW(motorAngleOutputBuffer, sizeof(motorAngleMsg));
+        // wificom.receiveMessageFromArduinoNEW(motorAngleOutputBuffer, sizeof(motorAngleMsg));
+        wificom.receiveMessageFromArduino(motorAngleOutputBuffer, sizeof(motorAngleMsg));
         std::memcpy(&motorAngleMsg, motorAngleOutputBuffer, sizeof(motorAngleMsg));
         if (motorAngleMsg.timestamp != prev_msg_time) {
+            auto request = std::make_shared<custom_controller_interfaces::srv::VectorPredictionFK::Request>();
+            auto result_future = fk_service_client_->async_send_request(
+                request, std::bind(&PlatformCommunicator::response_callback, this, std::placeholders::_1));
             std::cout << motorAngleMsg.values[0] << ", " << motorAngleMsg.values[1] << ", " << motorAngleMsg.values[2] << "\n";
             prev_msg_time = motorAngleMsg.timestamp;
+            
+
+        }
+    }
+
+    void response_callback(rclcpp::Client<custom_controller_interfaces::srv::VectorPredictionFK>::SharedFuture future) {
+        auto status = future.wait_for(1ms);
+        if (status == std::future_status::ready) {
+            // std::cout << future.get()->nx << std::endl;
         }
     }
 

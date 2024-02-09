@@ -42,13 +42,17 @@ add_executable(compliant_loadcell src/compliant_loadcell.cpp)
 ament_target_dependencies(compliant_loadcell rclcpp xarm_sdk std_msgs geometry_msgs custom_controller_interfaces)
 
 add_executable(operator_domain_manip src/operator_domain_manip.cpp)
-ament_target_dependencies(operator_domain_manip rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs)
+ament_target_dependencies(operator_domain_manip rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs tf2 tf2_ros)
 
 add_executable(spinning src/spinning.cpp)
 ament_target_dependencies(spinning rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs)
 
 add_executable(arduino_angle_listener src/arduino_angle_listener.cpp)
 ament_target_dependencies(arduino_angle_listener rclcpp xarm_sdk std_msgs geometry_msgs custom_controller_interfaces tf2 tf2_ros)
+
+add_executable(websocket_arduino src/websocket_arduino.cpp)
+ament_target_dependencies(websocket_arduino rclcpp std_msgs geometry_msgs tf2 tf2_ros custom_controller_interfaces)
+
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -63,6 +67,7 @@ install(TARGETS
   spinning
   compliant_loadcell
   arduino_angle_listener
+  websocket_arduino
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -80,7 +85,7 @@ endif()
 
 ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
-  scripts/lc_vector_predict.py
+  scripts/fk_vector_predict.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

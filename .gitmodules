@@ -10,3 +10,7 @@
 	path = src/network/lib/network_domain
 	url = git@github.com:DIA-for-TI/NetworkDomain.git
 	branch = main
+[submodule "src/custom_controller/pos_controller/src/util/websocketpp"]
+	path = src/custom_controller/pos_controller/src/util/websocketpp
+	url = git@github.com:zaphoyd/websocketpp.git
+	branch = master

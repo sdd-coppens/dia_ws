@@ -8,6 +8,13 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "custom_controller_interfaces/msg/pos_msg.hpp"
 
+#include <fstream>
+
+
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2/LinearMath/Matrix3x3.h"
+
+
 using namespace std::chrono_literals;
 
 /* This example creates a subclass of Node and uses std::bind() to register a
@@ -29,11 +36,108 @@ public:
         get_parameter("z", z_);
         get_parameter("w", w_);
 
-        publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/object/pose", 10);
+        // declare_parameter("tempnx", 0.f);
+        // declare_parameter("tempny", 0.f);
+        // get_parameter("tempnx", tempnx);
+        // get_parameter("tempny", tempny);
+
+        publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/pose_arduino", 10);
         timer_ = this->create_wall_timer(4ms, std::bind(&MinimalPublisher::timer_callback, this));
 
         incr = 1;
         x = 0;
+
+
+
+
+// #include "util/kinematics_platform/Kinematics.hpp"
+//         tf2::Quaternion q(
+//             0.f,
+//             0.f,
+//             0.f,
+//             1.f);
+// int goal_pos[3] = {0, 0, 0};
+//         Machine machine = Machine(2.0, 3.125, 1.75, 3.669291339);
+//         const double startingAngle = 202.9;
+//         const double angToStep = 3200.0 / 360.0;
+//         tf2::Vector3 plane_normal(0.f, 1.f, 0.f);
+//         tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
+//         bool temp_flag = false;
+//         for (int i = 0; i < 3; i++) {
+//             goal_pos[i] = round((startingAngle - machine.theta(i, 4.25, -plane_normal_rot[0], plane_normal_rot[2])) * angToStep);
+//         }
+//         std::cout << plane_normal_rot[0] << ", " << plane_normal_rot[1] << ", " << plane_normal_rot[2] << std::endl;
+//         std::cout << goal_pos[0] << ", " << goal_pos[1] << ", " << goal_pos[2] << std::endl;
+
+
+
+
+        // #include "util/kinematics_platform/Kinematics.hpp"
+
+        // int goal_pos[3] = {0, 0, 0};
+        // Machine machine = Machine(2.0, 3.125, 1.75, 3.669291339);
+        // const double startingAngle = 202.9;
+        // const double angToStep = 3200.0 / 360.0;
+
+        // angle_data_log.open("angle_data_new_new.csv");
+        // angle_data_log << "nx, ny, nz, motor0, motor1, motor2\n";
+
+        // for (float or_x = -0.2; or_x <= 0.2; or_x += 0.01) {
+        //     for (float or_y = -0.2; or_y <= 0.2; or_y += 0.01) {
+        //         for (float or_w = -1.0; or_w <= 1.0; or_w += 0.01) {
+        //             tf2::Quaternion q(
+        //                 or_x,
+        //                 or_y,
+        //                 0.f,
+        //                 or_w);
+
+        //             tf2::Vector3 plane_normal(0.f, 1.f, 0.f);
+        //             tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
+        //             bool temp_flag = false;
+        //             for (int i = 0; i < 3; i++) {
+        //                 goal_pos[i] = round((startingAngle - machine.theta(i, 4.25, -plane_normal_rot[0], plane_normal_rot[2])) * angToStep);
+        //                 if (goal_pos[i] == -2147483648) {
+        //                     temp_flag = true;
+        //                 }
+        //             }
+        //             if (temp_flag) {
+        //                 continue;
+        //             }
+        //             if (plane_normal_rot[0] <= 0.001f && plane_normal_rot[1] <= 0.001f && plane_normal_rot[2] <= 0.001f) {
+        //                 continue;
+        //             }
+        //             angle_data_log << -plane_normal_rot[0] << ", "<< plane_normal_rot[2] << ", " << plane_normal_rot[1] << ", " << goal_pos[0] << ", " << goal_pos[1] << ", " << goal_pos[2] << "\n";
+        //         }
+        //     }
+        // }
+
+
+
+
+
+        // for (float nx = -0.2; nx <= 0.2; nx+=0.001) {
+            // for (int i = 0; i < 3; i++) {
+            //     goal_pos[i] = round((startingAngle - machine.theta(i, 4.25, nx, 0.0)) * angToStep);
+            // }
+            // angle_data_log << nx << ", "<< 0.0 << ", " << goal_pos[0] << ", " << goal_pos[1] << ", " << goal_pos[2] << "\n";
+        // }
+        // for (float ny = -0.2; ny <= 0.2; ny+=0.001) {
+        //     for (int i = 0; i < 3; i++) {
+        //         goal_pos[i] = round((startingAngle - machine.theta(i, 4.25, 0.0, ny)) * angToStep);
+        //     }
+        //     angle_data_log << 0.0 << ", "<< ny << ", " << goal_pos[0] << ", " << goal_pos[1] << ", " << goal_pos[2] << "\n";
+        // }
+        // for (float nx = -0.2; nx <= 0.2; nx+=0.001) {
+        //     for (float ny = -0.2; ny <= 0.2; ny+=0.001) {
+        //         for (int i = 0; i < 3; i++) {
+        //             goal_pos[i] = round((startingAngle - machine.theta(i, 4.25, nx, ny)) * angToStep);
+        //         }
+        //         angle_data_log << nx << ", "<< ny << ", " << goal_pos[0] << ", " << goal_pos[1] << ", " << goal_pos[2] << "\n";
+        //     }
+        // }
+
+        // std::cout << "done\n";
+        // angle_data_log.close(); 
     }
 
 private:
@@ -81,9 +185,9 @@ private:
         // msg.pose.orientation.y = 2000 / 8000.f;
         msg.pose.orientation.y = y_;
         msg.pose.orientation.z = z_;
-        msg.pose.orientation.w = x / 8000.f;
+        // msg.pose.orientation.w = x / 8000.f;
         // msg.pose.orientation.w = 2000 / 8000.f;
-        // msg.pose.orientation.w = w_;
+        msg.pose.orientation.w = w_;
 
         // Swap around y and z due to coordinate system differences.
         std::array<float, 4> normalized_quat = normalize(msg.pose.orientation.x, msg.pose.orientation.z, msg.pose.orientation.y, msg.pose.orientation.w);
@@ -100,6 +204,9 @@ private:
     float y_;
     float z_;
     float w_;
+
+    std::ofstream angle_data_log;
+
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr publisher_;
 };

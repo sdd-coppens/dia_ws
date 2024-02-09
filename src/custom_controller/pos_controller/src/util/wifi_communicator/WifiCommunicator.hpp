@@ -101,7 +101,7 @@ class WifiCommunicator{
             setupArduinoAdress();
             sendMessageToArduino(startCommandArduino); // Send out the start signal to
 
-            this->makeSocketNonBlocking();
+            // this->makeSocketNonBlocking();
         }
 
         int sendMessageToArduino(std::string message){

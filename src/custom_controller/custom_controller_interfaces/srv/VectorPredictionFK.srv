@@ -1,0 +1,7 @@
+uint16 pos_a
+uint16 pos_b
+uint16 pos_c
+---
+float32 nx
+float32 ny
+float32 nz
