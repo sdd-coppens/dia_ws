@@ -36,11 +36,6 @@ public:
         get_parameter("z", z_);
         get_parameter("w", w_);
 
-        // declare_parameter("tempnx", 0.f);
-        // declare_parameter("tempny", 0.f);
-        // get_parameter("tempnx", tempnx);
-        // get_parameter("tempny", tempny);
-
         publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/pose_arduino", 10);
         timer_ = this->create_wall_timer(4ms, std::bind(&MinimalPublisher::timer_callback, this));
 
@@ -79,11 +74,11 @@ public:
         // const double startingAngle = 202.9;
         // const double angToStep = 3200.0 / 360.0;
 
-        // angle_data_log.open("angle_data_new_new.csv");
+        // angle_data_log.open("angle_data_new_new_new.csv");
         // angle_data_log << "nx, ny, nz, motor0, motor1, motor2\n";
 
-        // for (float or_x = -0.2; or_x <= 0.2; or_x += 0.01) {
-        //     for (float or_y = -0.2; or_y <= 0.2; or_y += 0.01) {
+        // for (float or_x = -0.4; or_x <= 0.4; or_x += 0.01) {
+        //     for (float or_y = -0.4; or_y <= 0.4; or_y += 0.01) {
         //         for (float or_w = -1.0; or_w <= 1.0; or_w += 0.01) {
         //             tf2::Quaternion q(
         //                 or_x,
@@ -93,25 +88,27 @@ public:
 
         //             tf2::Vector3 plane_normal(0.f, 1.f, 0.f);
         //             tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
+        //             plane_normal_rot.normalize();
         //             bool temp_flag = false;
         //             for (int i = 0; i < 3; i++) {
         //                 goal_pos[i] = round((startingAngle - machine.theta(i, 4.25, -plane_normal_rot[0], plane_normal_rot[2])) * angToStep);
-        //                 if (goal_pos[i] == -2147483648) {
-        //                     temp_flag = true;
-        //                 }
+                        // if (goal_pos[i] == -2147483648) {
+                        //     temp_flag = true;
+                        // }
         //             }
         //             if (temp_flag) {
         //                 continue;
         //             }
         //             if (plane_normal_rot[0] <= 0.001f && plane_normal_rot[1] <= 0.001f && plane_normal_rot[2] <= 0.001f) {
-        //                 continue;
+        //                 // continue;
         //             }
         //             angle_data_log << -plane_normal_rot[0] << ", "<< plane_normal_rot[2] << ", " << plane_normal_rot[1] << ", " << goal_pos[0] << ", " << goal_pos[1] << ", " << goal_pos[2] << "\n";
         //         }
         //     }
         // }
 
-
+        // std::cout << "done\n";
+        // angle_data_log.close(); 
 
 
 
@@ -136,8 +133,39 @@ public:
         //     }
         // }
 
+
+
+
+// NON QUATERNION WAY
+        // #include "util/kinematics_platform/Kinematics.hpp"
+
+        // int goal_pos[3] = {0, 0, 0};
+        // Machine machine = Machine(2.0, 3.125, 1.75, 3.669291339);
+        // const double startingAngle = 202.9;
+        // const double angToStep = 3200.0 / 360.0;
+        // bool temp_flag = false;
+        // angle_data_log.open("angle_data_no_quaternion.csv");
+        // angle_data_log << "nx, ny, nz, motor0, motor1, motor2\n";
+
+
+        // for (float nx = -0.4; nx <= 0.4; nx+=0.001) {
+        //     for (float ny = -0.4; ny <= 0.4; ny+=0.001) {
+        //         temp_flag = false;
+        //         for (int i = 0; i < 3; i++) {
+        //             goal_pos[i] = round((startingAngle - machine.theta(i, 4.25, nx, ny)) * angToStep);
+        //             if (goal_pos[i] == -2147483648) {
+        //                 temp_flag = true;
+        //             }
+        //         }
+        //         if (!temp_flag) {
+        //             float nz = sqrt(1 - nx*nx - ny*ny);
+        //             angle_data_log << nx << ", "<< ny << ", " << nz << ", " << goal_pos[0] << ", " << goal_pos[1] << ", " << goal_pos[2] << "\n";
+        //         }
+        //     }
+        // }
+
         // std::cout << "done\n";
-        // angle_data_log.close(); 
+        // angle_data_log.close();
     }
 
 private:

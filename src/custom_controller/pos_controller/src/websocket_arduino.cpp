@@ -35,13 +35,15 @@ public:
         // Set up a timer to handle non-blocking tasks
         timer_ = create_wall_timer(100ms, [this]() { server.poll(); });
         temp_int_ = 0u;
-        prev_sent_[0] = 0.0;
-        prev_sent_[1] = 0.0;
+        prev_sent_[0] = -1000.0;
+        prev_sent_[1] = -1000.0;
+        prev_sent_[2] = -1000.0;
+        prev_sent_[3] = -1000.0;
         subscription_keyboard_ = this->create_subscription<std_msgs::msg::String>("/keyboard", 10, std::bind(
             &WebSocketArduinoNode::keyboard_callback, this, std::placeholders::_1));
 
         subscription_object_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_arduino", 10, std::bind(
-            &WebSocketArduinoNode::object_pose_callback, this, std::placeholders::_1));
+            &WebSocketArduinoNode::pose_arduino_callback, this, std::placeholders::_1));
 
         fk_service_client_ =
             this->create_client<custom_controller_interfaces::srv::VectorPredictionFK>("vector_prediction_fk");
@@ -58,7 +60,7 @@ private:
     rclcpp::Client<custom_controller_interfaces::srv::VectorPredictionFK>::SharedPtr fk_service_client_;
     rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr object_pose_publisher_;
 
-    double prev_sent_[2];
+    double prev_sent_[4];
 
     uint8_t temp_int_;
 
@@ -69,7 +71,6 @@ private:
     }
 
     void onMessageReceived(const std::string& message) {
-        // std::cout << message << std::endl;
         std::istringstream iss(message.c_str());
         int time, pos_a_read, pos_b_read, pos_c_read;
         char comma;
@@ -86,35 +87,59 @@ private:
     void response_callback(rclcpp::Client<custom_controller_interfaces::srv::VectorPredictionFK>::SharedFuture future) {
         auto status = future.wait_for(1ms);
         if (status == std::future_status::ready) {
-            tf2::Vector3 vec_temp(future.get()->nx, future.get()->ny, future.get()->nz);
-            // std::cout << future.get()->nx << ", " << future.get()->ny << ", " << future.get()->nz << std::endl;
+            // Change back to operator domain coordinate system.
+            tf2::Vector3 vec_temp(-future.get()->nx, future.get()->nz, future.get()->ny);
             vec_temp.normalize();
-            std::cout << vec_temp[0] << ", " << vec_temp[1] << ", " << vec_temp[2] << std::endl;
-
 
             tf2::Quaternion q;
-            float pitch = asin(-vec_temp[2]);
-            float yaw = atan2(-vec_temp[0], vec_temp[1]);
-            q.setRPY(0, pitch, yaw);
+            q = rotationBetweenVectors(tf2::Vector3(0.f, 1.f, 0.f), vec_temp);
 
             auto msg = geometry_msgs::msg::PoseStamped();
             msg.header.frame_id = "world";
             msg.header.stamp = this->get_clock()->now();
-            // msg.pose.position.y = x / 4000.f;
             msg.pose.position.y = 0.f;
             msg.pose.position.x = 0.f;
             msg.pose.position.z = 0.f;
             msg.pose.orientation.x = q.getX();
-            // msg.pose.orientation.y = x / 8000.f;
-            // msg.pose.orientation.y = 2000 / 8000.f;
             msg.pose.orientation.y = q.getY();
             msg.pose.orientation.z = q.getZ();
-            // msg.pose.orientation.w = x / 8000.f;
-            // msg.pose.orientation.w = 2000 / 8000.f;
             msg.pose.orientation.w = q.getW();
 
             object_pose_publisher_->publish(msg);
         }
+    }
+
+    // source: https://stackoverflow.com/questions/71518531/how-do-i-convert-a-direction-vector-to-a-quaternion
+    tf2::Quaternion rotationBetweenVectors(tf2::Vector3 forward, tf2::Vector3 direction) {
+        forward = forward.normalize();
+        direction = direction.normalize();
+
+        float cosTheta = forward.dot(direction);
+        tf2::Vector3 axis;
+
+        if (cosTheta < -1 + 0.001f) {
+            // special case when vectors in opposite directions:
+            // there is Vector3f(1.0f, 0.0f, 0.0f)no "ideal" rotation axis
+            // So guess one; any will do as long as it's perpendicular to start
+            axis = tf2::Vector3(0.0f, 0.0f, 1.0f).cross(forward);
+
+            if (axis.length() * axis.length() < 0.01) {
+                axis = tf2::Vector3(1.0f, 0.0f, 0.0f).cross(forward);
+            }
+            axis = axis.normalize();
+            return tf2::Quaternion(axis.getX(), axis.getY(), axis.getZ(), 0);
+        }
+
+        axis = forward.cross(direction);
+        float s = sqrt((1 + cosTheta) * 2);
+        float invs = 1 / s;
+
+        return tf2::Quaternion(
+            axis.getX() * invs,
+            axis.getY() * invs,
+            axis.getZ() * invs,
+            s * 0.5f
+        );
     }
 
     void keyboard_callback(const std_msgs::msg::String::SharedPtr msg) {
@@ -133,7 +158,7 @@ private:
         }
     }
 
-    void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    void pose_arduino_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         tf2::Quaternion q(
                 msg->pose.orientation.x,
                 msg->pose.orientation.y,
@@ -142,11 +167,13 @@ private:
 
         tf2::Vector3 plane_normal(0.f, 1.f, 0.f);
         tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
-        if (-plane_normal_rot[0] != prev_sent_[0] && plane_normal_rot[2] != prev_sent_[1]) {
-            prev_sent_[0] = -plane_normal_rot[0];
-            prev_sent_[1] = plane_normal_rot[1];
+        plane_normal_rot.normalize();
+        if (msg->pose.orientation.x != prev_sent_[0] || msg->pose.orientation.y != prev_sent_[1] || msg->pose.orientation.z != prev_sent_[2] || msg->pose.orientation.w != prev_sent_[3]) {
+            prev_sent_[0] = msg->pose.orientation.x;
+            prev_sent_[1] = msg->pose.orientation.y;
+            prev_sent_[2] = msg->pose.orientation.z;
+            prev_sent_[3] = msg->pose.orientation.w;
             std::string msg_arduino(std::to_string(-plane_normal_rot[0]) + "," + std::to_string(plane_normal_rot[2]));
-            // std::cout << msg_arduino << std::endl;
             server.send(hdl, msg_arduino, websocketpp::frame::opcode::text);
         }
         

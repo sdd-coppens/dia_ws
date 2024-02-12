@@ -3,4 +3,6 @@
 install
 build
 *.csv
+!src/custom_controller/pos_controller/src/lookup_tables/angle_data_no_quaternion.csv
 .vscode
+*.pkl
