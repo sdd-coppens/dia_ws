@@ -23,15 +23,17 @@
 class JogController : public rclcpp::Node {
 public:
     JogController() : Node("jog_controller") {
-        whiteboard_l_ = 2.f;
-        whiteboard_w_ = 2.f;
+        // whiteboard_l_ = 2.f;
+        // whiteboard_w_ = 2.f;
+        whiteboard_l_ = 0.935f;
+        whiteboard_w_ = 0.705f;
         geofencing_offset_ = 10.f;
-        use_geofencing_ = false;
+        use_geofencing_ = true;
 
-        whiteboard_corners_rotated_[0] = {whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f};
-        whiteboard_corners_rotated_[1] = {-whiteboard_l_ / 2.f, whiteboard_w_ / 2.f, 0.f};
-        whiteboard_corners_rotated_[2] = {-whiteboard_l_ / 2.f, -whiteboard_w_ / 2.f, 0.f};
-        whiteboard_corners_rotated_[3] = {whiteboard_l_ / 2.f, -whiteboard_w_ / 2.f, 0.f};
+        whiteboard_corners_rotated_[0] = {whiteboard_l_, whiteboard_w_, 0.f};
+        whiteboard_corners_rotated_[1] = {-whiteboard_l_, whiteboard_w_, 0.f};
+        whiteboard_corners_rotated_[2] = {-whiteboard_l_, -whiteboard_w_, 0.f};
+        whiteboard_corners_rotated_[3] = {whiteboard_l_, -whiteboard_w_, 0.f};
 
         // Get ROS2 parameters and set defaults.
         declare_parameter("use_pd", true);
@@ -76,7 +78,7 @@ public:
                                                                            std::bind(&JogController::topic_callback,
                                                                                      this, std::placeholders::_1));
         subscription_object_pose_ =
-                this->create_subscription<geometry_msgs::msg::PoseStamped>("/object/pose", 10, std::bind(
+                    this->create_subscription<geometry_msgs::msg::PoseStamped>("/object/pose", 10, std::bind(
                         &JogController::object_pose_callback, this, std::placeholders::_1));
         subscription_demo_object_pose_ =
                 this->create_subscription<geometry_msgs::msg::PoseStamped>("/demo_object/pose", 10, std::bind(
@@ -123,8 +125,6 @@ public:
 
         printf("=========================================\n");
 
-        // wificom = WifiCommunicator("192.168.1.134");
-
         demo_object_pose_ = {0.f, 0.f, 0.f};
 
 
@@ -141,21 +141,22 @@ public:
           0--------1
 
          coordinate system
-          z    y
+          y    z
           |  /
           | /
           |/
           o------> x
 
-          a point (x, y, z) is (right, backward, up)
+          a point (x, y, z) is (right, up, backward)
 
          */
 
         // Initialize cube_points with an initializer list
         Eigen::Vector3f cube_points[] = {
-                {-1.0f, -1.0f, -0.035f}, {1.0f, -1.0f, -0.035f}, {-1.0f, 1.0f, -0.035f},
-                {1.0f, 1.0f, -0.035f}, {-1.0f, -1.0f, 0.035f}, {1.0f, -1.0f, 0.035f},
-                {-1.0f, 1.0f, 0.035f}, {1.0f, 1.0f, 0.035f}
+
+                {-0.935f, -0.035f, -0.705f}, {0.935f, -0.035f, -0.705f}, {-0.935f, -0.035f, 0.705f },
+                {0.935f, -0.035f, 0.705f }, {-0.935f, 0.035f, -0.705f }, {0.935f, 0.035f, -0.705f },
+                {-0.935f, 0.035f, 0.705f }, {0.935f, 0.035f, 0.705f }
         };
 
         // Define a mapping from points to triangles
@@ -300,6 +301,12 @@ private:
     }
 
     fp32 calc_min_z_geofencing(std::array<fp32, 3> novint_input) {
+        // std::cout << "calc_min_z_geofencing: " << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2] << std::endl;
+        // std::cout << whiteboard_corners_rotated_[0][0] << ", " << whiteboard_corners_rotated_[0][1] << std::endl;
+        // std::cout << novint_input[0] << ", " << novint_input[1] << std::endl;
+        // std::cout << "--------------------\n";
+
+
         // Check if the input is within the whiteboard boundaries. If not bound z.
 
         // D = (x2 - x1) * (yp - y1) - (xp - x1) * (y2 - y1)
@@ -327,8 +334,7 @@ private:
                                  - (novint_input[0] - whiteboard_corners_rotated_[3][0]) *
                                    (whiteboard_corners_rotated_[0][1] - whiteboard_corners_rotated_[3][1]);
 
-        if (d_corner0_corner1 >= 0.f && d_corner1_corner2 >= 0.f && d_corner2_corner3 >= 0.f &&
-            d_corner3_corner0 >= 0.f) {
+        if (d_corner0_corner1 >= 0.f && d_corner1_corner2 >= 0.f && d_corner2_corner3 >= 0.f && d_corner3_corner0 >= 0.f) {
             return -1.f;
         } else {
             tf2::Quaternion whiteboard_rot_quat;
@@ -348,14 +354,15 @@ private:
 
     std::array<fp32, 6> compute_input(std::array<fp32, 3> novint_input) {
         fp32 z_val = z_offset_ + novint_input[2];
-//        if (use_geofencing_) {
-//            fp32 z_geofenced = calc_min_z_geofencing(novint_input);
-//            if (z_geofenced != -1.f) {
+        if (use_geofencing_) {
+            fp32 z_geofenced = calc_min_z_geofencing(novint_input);
+            if (z_geofenced != -1.f) {
 //                if (z_val < (z_geofenced - geofencing_offset_) + geofencing_offset_) {
 //                    z_val = (z_geofenced - geofencing_offset_) + geofencing_offset_;
 //                }
-//            }
-//        }
+            } else {
+            }
+       }
         if (turn_attachment_) {
             return {x_offset_ + novint_input[0] , novint_input[1] , z_val,
                     180.f + object_pos_or[1], 0.f + object_pos_or[0], 0.f};
@@ -372,7 +379,12 @@ private:
         if (first_callback_) {
             arm->set_mode(0);
             arm->set_state(0);
-            std::array<fp32, 6> first_input = compute_input(novint_input);
+            
+            std::array<fp32, 3> world_coord_initial_arr;
+            std::array<fp32, 3> inital_input = {msg->pose.position.x, msg->pose.position.y, msg->pose.position.z};
+            world_to_robot(inital_input, world_coord_initial_arr);
+            
+            std::array<fp32, 6> first_input = compute_input(world_coord_initial_arr);
             fp32 first_pose[6];
             std::copy(first_input.begin(), first_input.end(), first_pose);
             arm->set_position(first_pose, true);
@@ -399,36 +411,21 @@ private:
                           * Eigen::AngleAxisf(object_pos_or[4] * M_PI / 180.f, Eigen::Vector3f::UnitY())
                           * Eigen::AngleAxisf(object_pos_or[3] * M_PI / 180.f, Eigen::Vector3f::UnitX());
 
-        Eigen::Vector3f p_remote;
+        Eigen::Vector3f p_remote = {0.f, 0.f, 0.f} ;
         get_new_point(p, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote,
                       p_remote);
 
-        //print
-        #if false
-        std::cout << "------[ warping ]------" << std::endl;
-        std::cout << "input: " << std::endl;
-        std::cout << "\t" << "novint_input: " << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2]
-                  << "\t" << std::endl;
-        std::cout << "\t" << "p: " << p << std::endl;
-        std::cout << "\t" << "translation_operator:\n" << translation_operator << std::endl;
-        std::cout << "\t" << "rotation_operator:\n" << rotation_operator << std::endl;
-        std::cout << "\t" << "translation_remote:\n" << translation_remote << std::endl;
-        std::cout << "\t" << "rotation_remote:\n" << rotation_remote << std::endl;
-        std::cout << "output: " << std::endl;
-        std::cout << "\t" << "p_remote: " << p_remote << std::endl;
-        #endif
-
-
         //Working in robot coordinates from here
         std::array<fp32, 3> p_remote_array;
-        std::array<fp32, 3> fp32_p_remote = {p_remote[0], p_remote[1], p_remote[2]};
+        std::array<fp32, 3> fp32_p_remote = {p_remote[0] / 1.f, p_remote[1] / 1.f, p_remote[2] / 1.f};
         world_to_robot(fp32_p_remote, p_remote_array);
 
         fp32 *curr_pos = static_cast<fp32 *>(malloc(6 * sizeof(fp32)));
         arm->get_position(curr_pos);
 
         //TODO: check this
-        std::array<fp32, 6> input = compute_input(p_remote_array);
+        std::array<fp32, 6> input = compute_input(p_remote_array);        
+        // std::array<fp32, 6> input = compute_input(novint_input);
         fp32 poses[6];
         std::copy(input.begin(), input.end(), poses);
 

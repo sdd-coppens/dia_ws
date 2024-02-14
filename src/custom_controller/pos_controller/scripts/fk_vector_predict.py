@@ -36,7 +36,7 @@ class PythonNode(Node):
 
             # Initialize the Random Forest Regressor
             # global rf_regressor
-            rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)  # n_estimators is the number of trees
+            rf_regressor = RandomForestRegressor(n_estimators=200, random_state=42)  # n_estimators is the number of trees
 
             # Fit the model to the training data
             rf_regressor.fit(X_train, y_train)

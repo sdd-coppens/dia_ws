@@ -145,15 +145,11 @@ private:
     void keyboard_callback(const std_msgs::msg::String::SharedPtr msg) {
         if (temp_int_ == 0u) {
             temp_int_++;
-            std::string msg("0.2,0.2");
+            std::string msg("0.196078,0.196078");
             server.send(hdl, msg, websocketpp::frame::opcode::text);
         } else if (temp_int_ == 1u) {
-            temp_int_++;
-            std::string msg("-0.2,-0.2");
-            server.send(hdl, msg, websocketpp::frame::opcode::text);
-        } else if (temp_int_ == 2u) {
             temp_int_ = 0u;
-            std::string msg("bunger");
+            std::string msg("-0.196078,-0.196078");
             server.send(hdl, msg, websocketpp::frame::opcode::text);
         }
     }
@@ -174,6 +170,7 @@ private:
             prev_sent_[2] = msg->pose.orientation.z;
             prev_sent_[3] = msg->pose.orientation.w;
             std::string msg_arduino(std::to_string(-plane_normal_rot[0]) + "," + std::to_string(plane_normal_rot[2]));
+            std::cout << std::to_string(-plane_normal_rot[0]) + "," + std::to_string(plane_normal_rot[2]) << std::endl;
             server.send(hdl, msg_arduino, websocketpp::frame::opcode::text);
         }
         

@@ -9,10 +9,9 @@ void robot_to_world(const std::array<fp32, 3> &robot_position,
                     std::array<fp32, 3> &world_vector)
 {
     // Convert robot position to world position
-    // (x, y, z) -> (-x, z, y) / 100.0f
-
-    world_vector[0] = -robot_position[0] / 100.0f;
-    world_vector[1] = robot_position[2] / 100.0f;
+    // (x, y, z) -> (-z, -x, y) / 100.0f
+    world_vector[0] = -robot_position[2] / 100.0f;
+    world_vector[1] = -robot_position[0] / 100.0f;
     world_vector[2] = robot_position[1] / 100.f;
 }
 
@@ -20,22 +19,20 @@ void world_to_robot(const std::array<float, 3> &world_vector,
                     std::array<float, 3> &robot_position)
 {
     // Convert world position to robot position
-    // (-x, z, y) -> (x, y, z)
-    robot_position[0] = -world_vector[0] * 100.0f;
-    robot_position[1] = world_vector[2] * 100.0f;
-    robot_position[2] = world_vector[1] * 100.0f;
+   // (-x, z, y) -> (-z, -x, y)
+    robot_position[0] = -world_vector[2] * 100.f;
+    robot_position[1] = -world_vector[0] * 100.f;
+    robot_position[2] = world_vector[1] * 100.f;
 }
-
 
 void robot_to_world(const std::array<float, 3> &robot_position,
                     const std::array<float, 4> &robot_orientation,
                     std::array<float, 3> &world_vector,
                     std::array<float, 3> &world_orientation) {
     // Convert robot position to world position
-    // (x, y, z) -> (-x, z, y) / 100.0f
-
-    world_vector[0] = -robot_position[0] / 100.0f;
-    world_vector[1] = robot_position[2] / 100.0f;
+    // (x, y, z) -> (-z, -x, y) / 100.0f
+    world_vector[0] = -robot_position[2] / 100.0f;
+    world_vector[1] = -robot_position[0] / 100.0f;
     world_vector[2] = robot_position[1] / 100.f;
 
     // Convert robot orientation to world orientation
@@ -53,10 +50,10 @@ void world_to_robot(const std::array<float, 3> &world_vector,
                     std::array<float, 3> &robot_position,
                     std::array<float, 4> &robot_orientation) {
     // Convert world position to robot position
-    // (-x, z, y) -> (x, y, z)
-    robot_position[0] = -world_vector[0];
-    robot_position[1] = world_vector[2];
-    robot_position[2] = world_vector[1];
+    // (-x, z, y) -> (-z, -x, y)
+    robot_position[0] = -world_vector[2] * 100.f;
+    robot_position[1] = -world_vector[0] * 100.f;
+    robot_position[2] = world_vector[1] * 100.f;
 
     // Convert world orientation to robot orientation
     // (-x, z, y, w) -> (x, y, z, w) * 100
