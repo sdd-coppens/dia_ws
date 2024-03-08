@@ -31,6 +31,7 @@ find_package(moveit REQUIRED)
 find_package(moveit_ros_planning_interface REQUIRED)
 find_package(moveit_msgs REQUIRED)
 
+find_package(Catch2 REQUIRED)
 
 add_executable(keyboard src/keyboard.cpp)
 ament_target_dependencies(keyboard rclcpp std_msgs)
@@ -53,6 +54,8 @@ ament_target_dependencies(arduino_angle_listener rclcpp xarm_sdk std_msgs geomet
 add_executable(websocket_arduino src/websocket_arduino.cpp)
 ament_target_dependencies(websocket_arduino rclcpp std_msgs geometry_msgs tf2 tf2_ros custom_controller_interfaces)
 
+add_executable(test_perturb tests/tests_perturb.cpp)
+target_link_libraries(test_perturb PRIVATE Catch2::Catch2WithMain)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
