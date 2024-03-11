@@ -207,8 +207,12 @@ void perturb_motion(const Eigen::Vector3f &p, const Eigen::Vector3f &closest_poi
 //    float ratio = p_min.norm() / (p_delta.norm() * (3.0f / 2.0f));
 
     float ratio;
-    if (p_min.norm() < (p_delta.norm() * (3.0f / 2.0f))) {
-        ratio = 1 - p_min.norm() / (p_delta.norm() * (3.0f / 2.0f));
+
+    if (p_min.norm() < 0.02) { //tiny "deadzone" to avoid jitter
+        ratio = 1.0;
+    }
+    else if ( (p_min.norm() - 0.02) < (p_delta.norm() * (3.0f / 2.0f))) {
+        ratio = 1 - (p_min.norm() - 0.02) / (p_delta.norm() * (3.0f / 2.0f));
     } else {
         ratio = 0.0f;
     }
