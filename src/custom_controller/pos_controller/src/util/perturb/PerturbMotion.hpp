@@ -81,6 +81,7 @@ float inline f(float x) {
     } else if (x > 1.0f) {
         return 1.0f;
     } else {
+//        return x;
         return -2.0f * x * x * x + 3.0f * x * x;
     }
 }
@@ -196,19 +197,27 @@ void inline remote_point(const Eigen::Vector3f &p, const Eigen::Vector3f &transl
 
 void perturb_motion(const Eigen::Vector3f &p, const Eigen::Vector3f &closest_point,
                     const Eigen::Vector3f &closest_point_remote, Eigen::Vector3f &perturbed_point) {
-    Eigen::Vector3f v = closest_point_remote - closest_point;
-    Eigen::Vector3f d = p - closest_point;
+    Eigen::Vector3f p_delta = closest_point_remote - closest_point;
+    Eigen::Vector3f p_min = p - closest_point;
 
-    if (v.norm() == 0.0f) {
-        perturbed_point = p;
-        return;
+//    float ratio = 1 - p_min.norm() / ( p_delta.norm() * (3.0f / 2.0f)); //TODO: take better look at this. It should not be 1 whenever p_delta is smaller.
+    // it should be 1, when p_min.norm() is zero, and should be 1 when p_min.norm() is equal to p_delta.norm() * (3.0f / 2.0f)
+
+
+//    float ratio = p_min.norm() / (p_delta.norm() * (3.0f / 2.0f));
+
+    float ratio;
+    if (p_min.norm() < (p_delta.norm() * (3.0f / 2.0f))) {
+        ratio = 1 - p_min.norm() / (p_delta.norm() * (3.0f / 2.0f));
+    } else {
+        ratio = 0.0f;
     }
-    float ratio = 1 - d.norm() / (v.norm() * 3.0f / 2.0f);
 
-    perturbed_point = p + f(ratio) * v;
+    perturbed_point = p + f(ratio) * p_delta;
 }
 
-void get_new_point(const Eigen::Vector3f &p, const std::vector<Eigen::Matrix<float, 3, 3>> &triangles,
+void get_new_point(const Eigen::Vector3f &p, const float point_radius,
+                   const std::vector<Eigen::Matrix<float, 3, 3>> &triangles,
                    const Eigen::Vector3f &translation_operator,
                    const Eigen::Matrix<float, 3, 3> &rotation_operator,
                    const Eigen::Vector3f &translation_remote,
@@ -222,7 +231,9 @@ void get_new_point(const Eigen::Vector3f &p, const std::vector<Eigen::Matrix<flo
     remote_point(closest_point, translation_operator, rotation_operator, translation_remote, rotation_remote,
                  closest_point_remote);
 
-    perturb_motion(p, closest_point, closest_point_remote, perturbed_point);
+    Eigen::Vector3f closest_point_on_pointer = p - point_radius * (p - closest_point).normalized();
+
+    perturb_motion(closest_point_on_pointer, closest_point, closest_point_remote, perturbed_point);
 }
 
 #endif

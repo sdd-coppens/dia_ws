@@ -414,7 +414,7 @@ private:
                           * Eigen::AngleAxisf(object_pos_or[3] * M_PI / 180.f, Eigen::Vector3f::UnitX());
 
         Eigen::Vector3f p_remote = {0.f, 0.f, 0.f} ;
-        get_new_point(p, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote,
+        get_new_point(p, 0.02, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote,
                       p_remote);
 
         //Working in robot coordinates from here
