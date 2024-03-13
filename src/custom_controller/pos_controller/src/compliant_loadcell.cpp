@@ -2,8 +2,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/timer.hpp"
 
-#include "custom_controller_interfaces/srv/vector_prediction_lc.hpp"
-
 #include "custom_controller_interfaces/msg/lc_msg.hpp"
 #include "custom_controller_interfaces/msg/vec_predict_msg.hpp"
 

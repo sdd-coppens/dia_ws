@@ -1,5 +1,5 @@
-#include "network_domain/connection.hpp"
-#include "network_domain/message.hpp"
+#include "connection.hpp"
+#include "message.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"

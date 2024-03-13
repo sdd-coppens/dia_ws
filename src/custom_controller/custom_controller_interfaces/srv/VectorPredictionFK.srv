@@ -1,7 +1,9 @@
 uint16 pos_a
 uint16 pos_b
 uint16 pos_c
+uint16 pos_x_axis
 ---
 float32 nx
 float32 ny
 float32 nz
+uint16 pos_x_axis

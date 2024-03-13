@@ -19,6 +19,19 @@ def generate_launch_description():
         # Node(
         #     package='pos_controller',
         #     namespace='pos_controller1',
+        #     executable='fk_vector_predict.py',
+        #     name='fk_vector_predict'
+        # ),
+        Node(
+            package='pos_controller',
+            namespace='pos_controller2',
+            executable='delay_whiteboard_messages',
+            name='delay_whiteboard_messages'
+        ),
+
+        # Node(
+        #     package='pos_controller',
+        #     namespace='pos_controller1',
         #     executable='operator_domain_manip',
         #     name='operator_domain_manip'
         # ),

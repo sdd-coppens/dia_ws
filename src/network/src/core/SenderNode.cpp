@@ -112,5 +112,6 @@ void SenderNode::writeToConnection() {
 }
 
 SenderNode::~SenderNode() {
+    this->connection->stop();
     this->networkThread.join();
 }

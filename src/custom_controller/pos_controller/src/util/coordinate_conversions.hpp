@@ -28,7 +28,7 @@ void world_to_robot(const std::array<float, 3> &world_vector,
 void robot_to_world(const std::array<float, 3> &robot_position,
                     const std::array<float, 4> &robot_orientation,
                     std::array<float, 3> &world_vector,
-                    std::array<float, 3> &world_orientation) {
+                    std::array<float, 4> &world_orientation) {
     // Convert robot position to world position
     // (x, y, z) -> (-z, -x, y) / 100.0f
     world_vector[0] = -robot_position[2] / 100.0f;
@@ -46,7 +46,7 @@ void robot_to_world(const std::array<float, 3> &robot_position,
 
 //TODO: scalings?
 void world_to_robot(const std::array<float, 3> &world_vector,
-                    const std::array<float, 3> &world_orientation,
+                    const std::array<float, 4> &world_orientation,
                     std::array<float, 3> &robot_position,
                     std::array<float, 4> &robot_orientation) {
     // Convert world position to robot position

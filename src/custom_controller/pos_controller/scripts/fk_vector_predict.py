@@ -64,6 +64,7 @@ class PythonNode(Node):
         # TODO: no clue why this doesn't behave as expected.
         # response.nz = float(predicted_vector_values[0][2])
         response.nz = float(math.sqrt(1 - (response.nx*response.nx)-(response.ny*response.ny)))
+        response.pos_x_axis = request.pos_x_axis
         return response
 
 

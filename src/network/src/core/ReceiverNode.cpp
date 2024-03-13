@@ -48,19 +48,19 @@ ReceiverNode::~ReceiverNode() {
 void ReceiverNode::networkCallback(const netdomain::message::SceneSyncMessageData& msgData) {
     //If the received sequence number is higher than the previously received one, throw msg away
 
-    // RCLCPP_INFO(get_logger(), "Received packet");    
+    // RCLCPP_INFO(get_logger(), "Received packet");
     long incomingSequenceNum = msgData.sequence_number;
 
-    // to avoid overflow
-    if (incomingSequenceNum < 100) {
-        this->prevSequenceNum = incomingSequenceNum;
-    }
+    // // to avoid overflow
+    // if (incomingSequenceNum < 100) {
+    //     this->prevSequenceNum = incomingSequenceNum;
+    // }
 
-    // RCLCPP_INFO(get_logger(), "incoming message %d", incomingSequenceNum);    
-    if(incomingSequenceNum <= this->prevSequenceNum) {
-        return;
-    }
-    this->prevSequenceNum = incomingSequenceNum;
+    // // RCLCPP_INFO(get_logger(), "incoming message %d", incomingSequenceNum);    
+    // if(incomingSequenceNum <= this->prevSequenceNum) {
+    //     return;
+    // }
+    // this->prevSequenceNum = incomingSequenceNum;
     
     this->publishProxyPose(
         msgData.proxy_position[0], msgData.proxy_position[1], msgData.proxy_position[2], 
@@ -84,6 +84,7 @@ void ReceiverNode::networkCallback(const netdomain::message::SceneSyncMessageDat
 }
 
 void ReceiverNode::publishProxyPose(float x, float y, float z, float qx, float qy, float qz, float qw) {
+    // RCLCPP_INFO(get_logger(), "Publishing proxy pose");
     auto poseMessage = this->getPoseStamptedMessage(x, y, z, qx, qy, qz, qw);
     this->proxyPosPublisher->publish(poseMessage);
 }

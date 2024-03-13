@@ -53,6 +53,24 @@ ament_target_dependencies(arduino_angle_listener rclcpp xarm_sdk std_msgs geomet
 add_executable(websocket_arduino src/websocket_arduino.cpp)
 ament_target_dependencies(websocket_arduino rclcpp std_msgs geometry_msgs tf2 tf2_ros custom_controller_interfaces)
 
+add_executable(udp_whiteboard_communicator src/udp_whiteboard_communicator.cpp)
+ament_target_dependencies(udp_whiteboard_communicator rclcpp xarm_sdk std_msgs geometry_msgs custom_controller_interfaces tf2 tf2_ros)
+
+add_executable(delay_whiteboard_messages src/delay_whiteboard_messages.cpp)
+ament_target_dependencies(delay_whiteboard_messages rclcpp geometry_msgs std_msgs)
+
+
+add_executable(0testing src/0testing.cpp)
+ament_target_dependencies(0testing rclcpp geometry_msgs std_msgs)
+
+
+
+
+add_executable(impulse_testing src/impulse_testing.cpp)
+ament_target_dependencies(impulse_testing rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs tf2 tf2_ros)
+
+add_executable(moment_testing src/moment_testing.cpp)
+ament_target_dependencies(moment_testing rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs tf2 tf2_ros)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -68,6 +86,11 @@ install(TARGETS
   compliant_loadcell
   arduino_angle_listener
   websocket_arduino
+  udp_whiteboard_communicator
+  delay_whiteboard_messages
+  impulse_testing
+  moment_testing
+  0testing
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)

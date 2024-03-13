@@ -4,6 +4,7 @@
 #include "util/websocketpp/websocketpp/server.hpp"
 
 #include "custom_controller_interfaces/srv/vector_prediction_fk.hpp"
+#include "util/wifi_communicator/WifiCommunicator.hpp"
 
 #include "std_msgs/msg/string.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
@@ -15,43 +16,33 @@
 #include <ctime>
 #include <fstream>
 
+struct MotorAngleOutput
+{
+  uint16_t values[4];
+  uint32_t timestamp;
+};
+
+
 using namespace std::chrono_literals;
 
-class WebSocketArduinoNode : public rclcpp::Node {
+class UDPArduinoNode : public rclcpp::Node {
 public:
-    WebSocketArduinoNode() : Node("websocket_arduino_node") {
-        // Initialize the WebSocket server
-        server.set_message_handler([this](websocketpp::connection_hdl hdl_arg, websocketpp::server<websocketpp::config::asio>::message_ptr msg) {
-            onMessageReceived(msg->get_payload());
-        });
-
-        server.set_open_handler([this](websocketpp::connection_hdl hdl_arg) {
-            onOpen(hdl_arg);
-        });
-
-        server.init_asio();
-        server.set_reuse_addr(true);
-        server.listen(9002);
-        server.start_accept();
-
-        server.clear_access_channels(websocketpp::log::alevel::frame_header | websocketpp::log::alevel::frame_payload);
-
-        keyboard_callback_count = 0;
-
-        // Set up a timer to handle non-blocking tasks
-        timer_ = create_wall_timer(100ms, [this]() { server.poll(); });
+    UDPArduinoNode() : Node("udp_arduino_node") {
         temp_bool_ = false;
-        first_temp_ = false;
+
+        wificom.sendMessageToArduino("Start");
 
         for (uint8_t i = 0u; i < 5u; i++) {
             prev_sent_[i] = -1000.0;
         }
 
+        timer_ = this->create_wall_timer(1ms, std::bind(&UDPArduinoNode::timer_callback, this));
+
         subscription_keyboard_ = this->create_subscription<std_msgs::msg::String>("/keyboard", 10, std::bind(
-            &WebSocketArduinoNode::keyboard_callback, this, std::placeholders::_1));
+            &UDPArduinoNode::keyboard_callback, this, std::placeholders::_1));
 
         subscription_object_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>("/pose_arduino", 10, std::bind(
-            &WebSocketArduinoNode::pose_arduino_callback, this, std::placeholders::_1));
+            &UDPArduinoNode::pose_arduino_callback, this, std::placeholders::_1));
 
         fk_service_client_ =
             this->create_client<custom_controller_interfaces::srv::VectorPredictionFK>("vector_prediction_fk");
@@ -71,23 +62,27 @@ public:
         log_send_msg_ << "timestamp (ns)" << "," << "qX" << "," << "qY" << "," << "qZ" << "," << "qW" << "," << "pos_x_axis" << std::endl;
     }
 
-    ~WebSocketArduinoNode() {
+    ~UDPArduinoNode() {
         log_msg_received_.close();
         log_fk_.close();
         log_send_msg_.close();
     }
 
 private:
+    WifiCommunicator wificom = WifiCommunicator("192.168.1.102");
     bool logging_;
     bool send_whiteboard_information_;
     std::ofstream log_msg_received_;
     std::ofstream log_fk_;
     std::ofstream log_send_msg_;
 
+    uint32_t prev_msg_time;
+    long last_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+    long first_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+    uint8_t motorAngleOutputBuffer[12];
+
     std::deque<geometry_msgs::msg::PoseStamped> prev_sent_fk_;
 
-    websocketpp::connection_hdl hdl;
-    websocketpp::server<websocketpp::config::asio> server;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_keyboard_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_object_pose_;
@@ -99,35 +94,30 @@ private:
     bool temp_bool_;
     int keyboard_callback_count = 0;
 
-    void onOpen(websocketpp::connection_hdl hdl_arg) {
-        hdl = hdl_arg;
-        std::string msg("start");
-        server.send(hdl, msg, websocketpp::frame::opcode::text);
-    }
-
-    void onMessageReceived(const std::string& message) {
-        if (first_temp_) {
-            std::cout << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
-            first_temp_ = false;
+    void timer_callback() {
+        MotorAngleOutput motorAngleMsg;
+        uint8_t read_res = wificom.receiveMessageFromArduino(motorAngleOutputBuffer, sizeof(motorAngleMsg));
+        if (read_res == 1u) {
+            return;
         }
-        std::istringstream iss(message.c_str());
-        int time, pos_a_read, pos_b_read, pos_c_read, pos_x_axis_read;
-        char comma;
-        if (iss >> time >> comma >> pos_a_read >> comma >> pos_b_read >> comma >> pos_c_read >> comma >> pos_x_axis_read) {
+        last_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+        std::memcpy(&motorAngleMsg, motorAngleOutputBuffer, sizeof(motorAngleMsg));
+        if (motorAngleMsg.timestamp != prev_msg_time) {
             auto request = std::make_shared<custom_controller_interfaces::srv::VectorPredictionFK::Request>();
-            request->pos_a = pos_a_read;
-            request->pos_b = pos_b_read;
-            request->pos_c = pos_c_read;
-            request->pos_x_axis = pos_x_axis_read;
+            request->pos_a = motorAngleMsg.values[0];
+            request->pos_b = motorAngleMsg.values[1];
+            request->pos_c = motorAngleMsg.values[2];
+            request->pos_x_axis = motorAngleMsg.values[3];
             if (logging_) {
                 auto time_stamp_cpp = std::chrono::system_clock::now();
-                log_msg_received_ << time_stamp_cpp.time_since_epoch().count() << "," << time << "," << pos_a_read << "," << pos_b_read << "," << pos_c_read << "," << pos_x_axis_read << std::endl;
+                log_msg_received_ << time_stamp_cpp.time_since_epoch().count() << "," << motorAngleMsg.timestamp << "," << motorAngleMsg.values[0] << "," << motorAngleMsg.values[1] << "," << motorAngleMsg.values[2] << "," << motorAngleMsg.values[3] << std::endl;
             }
 
             auto result_future = fk_service_client_->async_send_request(
-                request, std::bind(&WebSocketArduinoNode::response_callback, this, std::placeholders::_1));
+                request, std::bind(&UDPArduinoNode::response_callback, this, std::placeholders::_1));
         }
     }
+
 
     geometry_msgs::msg::PoseStamped calc_average_fk() {
         geometry_msgs::msg::PoseStamped averaged_fk_msg = geometry_msgs::msg::PoseStamped();
@@ -235,10 +225,6 @@ private:
 
     void keyboard_callback(const std_msgs::msg::String::SharedPtr msg) {
         if (msg->data == "f") {
-            first_temp_ = true;
-            std::cout << "-----------------------\n" << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
-            std::cout << first_temp_ << std::endl;
-
             auto msg_temp = geometry_msgs::msg::PoseStamped();
             msg_temp.pose.position.x = 0.f;
             msg_temp.pose.orientation.x = 0.1f;
@@ -264,7 +250,8 @@ private:
             msg_temp.pose.orientation.y = 0.0f;
             msg_temp.pose.orientation.z = 0.0f;
             msg_temp.pose.orientation.w = 1.0f;
-            object_pose_publisher_delayed_->publish(msg_temp);
+            std::shared_ptr<geometry_msgs::msg::PoseStamped> posePtr = std::make_shared<geometry_msgs::msg::PoseStamped>(msg_temp);
+            pose_arduino_callback(posePtr);
         }
 
     }
@@ -286,7 +273,8 @@ private:
             prev_sent_[3] = msg->pose.orientation.w;
             prev_sent_[4] = msg->pose.position.x;
             std::string msg_arduino(std::to_string(-plane_normal_rot[0]) + "," + std::to_string(plane_normal_rot[2]) + "," + std::to_string(msg->pose.position.x));
-            server.send(hdl, msg_arduino, websocketpp::frame::opcode::text);
+            // server.send(hdl, msg_arduino, websocketpp::frame::opcode::text);
+            wificom.sendMessageToArduino(msg_arduino);
             if (logging_) {
                 auto time_stamp_cpp = std::chrono::system_clock::now();
                 log_send_msg_ << time_stamp_cpp.time_since_epoch().count() << "," << q.getX() << "," << q.getZ() << "," << q.getY() << "," << q.getW() << "," << msg->pose.position.x << std::endl;
@@ -299,10 +287,171 @@ private:
 int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
 
-    auto node = std::make_shared<WebSocketArduinoNode>();
+    auto node = std::make_shared<UDPArduinoNode>();
 
     rclcpp::spin(node);
 
     rclcpp::shutdown();
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// #include "rclcpp/logger.hpp"
+// #include "rclcpp/rclcpp.hpp"
+// #include "rclcpp/timer.hpp"
+
+// #include "geometry_msgs/msg/pose_stamped.hpp"
+
+// #include "custom_controller_interfaces/srv/vector_prediction_fk.hpp"
+
+// #include "custom_controller_interfaces/msg/lc_msg.hpp"
+// #include "custom_controller_interfaces/msg/vec_predict_msg.hpp"
+
+// #include <chrono>
+// #include <cstdlib>
+// #include <future>
+// #include <memory>
+
+// #include "util/wifi_communicator/WifiCommunicator.hpp"
+// #include "std_msgs/msg/string.hpp"
+// #include <boost/circular_buffer.hpp>
+
+// #include "tf2/LinearMath/Quaternion.h"
+// #include "tf2/LinearMath/Matrix3x3.h"
+
+// #include <fstream>
+
+// #include "xarm/wrapper/xarm_api.h"
+// #include <termios.h>
+
+// using namespace std::chrono_literals;
+
+// struct MotorAngleOutput
+// {
+//   uint16_t values[3];
+//   uint32_t timestamp;
+// };
+
+// class PlatformCommunicator : public rclcpp::Node {
+// public:
+//     PlatformCommunicator() : Node("compliant_loadcell") {
+//         wificom.sendMessageToArduino("Start");
+//         prev_msg_time = 0;
+        
+//         temp_bool = false;
+//         subscription_keyboard_ = this->create_subscription<std_msgs::msg::String>("/keyboard", 10, std::bind(
+//             &PlatformCommunicator::keyboard_callback, this, std::placeholders::_1));
+//         subscription_object_pose_ =
+//                 this->create_subscription<geometry_msgs::msg::PoseStamped>("/object/pose", 10, std::bind(
+//                         &PlatformCommunicator::object_pose_callback, this, std::placeholders::_1));
+
+//         fk_service_client_ =
+//             this->create_client<custom_controller_interfaces::srv::VectorPredictionFK>("vector_prediction_fk");
+
+//         timer_ = this->create_wall_timer(1ms, std::bind(&PlatformCommunicator::timer_callback, this));
+//     }
+
+//     ~PlatformCommunicator() {
+
+//     }
+
+// private:
+//     uint8_t motorAngleOutputBuffer[10];
+//     uint32_t prev_msg_time;
+//     rclcpp::Subscription<std_msgs::msg::String>::SharedPtr subscription_keyboard_;
+//     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_object_pose_;
+//     rclcpp::Client<custom_controller_interfaces::srv::VectorPredictionFK>::SharedPtr fk_service_client_;
+//     rclcpp::TimerBase::SharedPtr timer_;
+//     bool temp_bool;
+//     bool first_temp_ = false;
+//     long last_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+//     long first_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+//     WifiCommunicator wificom = WifiCommunicator("192.168.1.102");
+
+//     void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+//         tf2::Quaternion q(
+//                 msg->pose.orientation.x,
+//                 msg->pose.orientation.y,
+//                 msg->pose.orientation.z,
+//                 msg->pose.orientation.w);
+
+//         // TODO: Temporary testing
+//         tf2::Vector3 plane_normal(0.f, 1.f, 0.f);
+//         tf2::Vector3 plane_normal_rot = tf2::quatRotate(q, plane_normal);
+//         wificom.sendMessageToArduino(std::to_string(-plane_normal_rot[0]) + "," + std::to_string(plane_normal_rot[2]));
+//     }
+
+//     // Keyboard listener.
+//     void keyboard_callback(const std_msgs::msg::String::SharedPtr msg) {
+//         first_temp_ = true;
+//         first_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+//         // std::cout << "-----------------------\n" << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
+//         if (temp_bool) {
+//             wificom.sendMessageToArduino("0.1023,0.1");
+//         } else {
+//             wificom.sendMessageToArduino("-0.1023,-0.1");
+//         }
+//         temp_bool = !temp_bool;
+//     }
+
+//     void timer_callback() {
+//         MotorAngleOutput motorAngleMsg;
+//         // wificom.receiveMessageFromArduinoNEW(motorAngleOutputBuffer, sizeof(motorAngleMsg));
+//         uint8_t read_res = wificom.receiveMessageFromArduino(motorAngleOutputBuffer, sizeof(motorAngleMsg));
+//         if (read_res == 1u) {
+//             return;
+//         }
+//         if (first_temp_) {
+//             std::cout << "-------------\n" <<"first delta: " << (std::chrono::system_clock::now().time_since_epoch().count() - first_msg_) / 1000000 << std::endl;
+//             // std::cout << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
+//             first_temp_ = false;
+//         }
+//         std::cout << "delta (ms): " << (std::chrono::system_clock::now().time_since_epoch().count() - last_msg_) / 1000000 << std::endl;
+//         last_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+//         std::memcpy(&motorAngleMsg, motorAngleOutputBuffer, sizeof(motorAngleMsg));
+//         if (motorAngleMsg.timestamp != prev_msg_time) {
+
+
+
+
+
+//             auto result_future = fk_service_client_->async_send_request(
+//                 request, std::bind(&WebSocketArduinoNode::response_callback, this, std::placeholders::_1));
+//             auto request = std::make_shared<custom_controller_interfaces::srv::VectorPredictionFK::Request>();
+//             auto result_future = fk_service_client_->async_send_request(
+//                 request, std::bind(&PlatformCommunicator::response_callback, this, std::placeholders::_1));
+//             std::cout << motorAngleMsg.values[0] << ", " << motorAngleMsg.values[1] << ", " << motorAngleMsg.values[2] << "\n";
+//             prev_msg_time = motorAngleMsg.timestamp;
+            
+
+//         }
+//     }
+
+//     void response_callback(rclcpp::Client<custom_controller_interfaces::srv::VectorPredictionFK>::SharedFuture future) {
+//         auto status = future.wait_for(1ms);
+//         if (status == std::future_status::ready) {
+//             // std::cout << future.get()->nx << std::endl;
+//         }
+//     }
+
+// };
+
+// int main(int argc, char *argv[]) {
+//     rclcpp::init(argc, argv);
+//     auto node = std::make_shared<PlatformCommunicator>();
+//     rclcpp::spin(node);
+//     rclcpp::shutdown();
+//     return 0;
+// }

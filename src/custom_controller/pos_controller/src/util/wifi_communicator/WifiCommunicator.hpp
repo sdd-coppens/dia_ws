@@ -101,13 +101,22 @@ class WifiCommunicator{
             setupArduinoAdress();
             sendMessageToArduino(startCommandArduino); // Send out the start signal to
 
+
+#include <sys/types.h> 
+#include <sys/socket.h>
+            struct timeval read_timeout;
+            read_timeout.tv_sec = 0;
+            read_timeout.tv_usec = 10;
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+
+
             // this->makeSocketNonBlocking();
         }
 
         int sendMessageToArduino(std::string message){
             // Send a UDP packet to the Arduino
             if (sendto(sock, message.c_str(), message.length(), 0, (struct sockaddr *)&this->arduino_address, sizeof(this->arduino_address)) < 0) {
-                std::cerr << "Failed to send data to Arduino" << std::endl;
+                // std::cerr << "Failed to send data to Arduino" << std::endl;
                 return 1;
             }
             return 0;
@@ -116,7 +125,7 @@ class WifiCommunicator{
         int receiveMessageFromArduino(uint8_t * buffer, size_t buffSize){
             ssize_t bytes_received = recvfrom(this->sock, buffer, buffSize, 0, (struct sockaddr *)&this->sender, &this->sender_length);
             if (bytes_received < 0) {
-                std::cout << "Failed to receive data from Arduino" << std::endl;
+                // std::cout << "Failed to receive data from Arduino" << std::endl;
                 return 1;
             }
             return 0;

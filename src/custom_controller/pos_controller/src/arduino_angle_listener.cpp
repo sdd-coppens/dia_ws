@@ -65,7 +65,10 @@ private:
     rclcpp::Client<custom_controller_interfaces::srv::VectorPredictionFK>::SharedPtr fk_service_client_;
     rclcpp::TimerBase::SharedPtr timer_;
     bool temp_bool;
-    WifiCommunicator wificom = WifiCommunicator("192.168.1.134");
+    bool first_temp_ = false;
+    long last_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+    long first_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+    WifiCommunicator wificom = WifiCommunicator("192.168.1.102");
 
     void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         tf2::Quaternion q(
@@ -82,7 +85,9 @@ private:
 
     // Keyboard listener.
     void keyboard_callback(const std_msgs::msg::String::SharedPtr msg) {
-        std::cout << "keyboard\n";
+        first_temp_ = true;
+        first_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
+        // std::cout << "-----------------------\n" << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
         if (temp_bool) {
             wificom.sendMessageToArduino("0.1023,0.1");
         } else {
@@ -94,13 +99,23 @@ private:
     void timer_callback() {
         MotorAngleOutput motorAngleMsg;
         // wificom.receiveMessageFromArduinoNEW(motorAngleOutputBuffer, sizeof(motorAngleMsg));
-        wificom.receiveMessageFromArduino(motorAngleOutputBuffer, sizeof(motorAngleMsg));
+        uint8_t read_res = wificom.receiveMessageFromArduino(motorAngleOutputBuffer, sizeof(motorAngleMsg));
+        if (read_res == 1u) {
+            return;
+        }
+        if (first_temp_) {
+            std::cout << "-------------\n" <<"first delta: " << (std::chrono::system_clock::now().time_since_epoch().count() - first_msg_) / 1000000 << std::endl;
+            // std::cout << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
+            first_temp_ = false;
+        }
+        std::cout << "delta (ms): " << (std::chrono::system_clock::now().time_since_epoch().count() - last_msg_) / 1000000 << std::endl;
+        last_msg_ = std::chrono::system_clock::now().time_since_epoch().count();
         std::memcpy(&motorAngleMsg, motorAngleOutputBuffer, sizeof(motorAngleMsg));
         if (motorAngleMsg.timestamp != prev_msg_time) {
             auto request = std::make_shared<custom_controller_interfaces::srv::VectorPredictionFK::Request>();
             auto result_future = fk_service_client_->async_send_request(
                 request, std::bind(&PlatformCommunicator::response_callback, this, std::placeholders::_1));
-            std::cout << motorAngleMsg.values[0] << ", " << motorAngleMsg.values[1] << ", " << motorAngleMsg.values[2] << "\n";
+            // std::cout << motorAngleMsg.values[0] << ", " << motorAngleMsg.values[1] << ", " << motorAngleMsg.values[2] << "\n";
             prev_msg_time = motorAngleMsg.timestamp;
             
 
