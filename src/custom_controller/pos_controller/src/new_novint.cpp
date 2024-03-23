@@ -80,7 +80,7 @@ public:
         first_callback_ = true;
 
         // Open csv logging.
-        logging_ = false;
+        logging_ = true;
         log_file_.open("logs/main_node/log.csv");
         log_file_ << "timestamp (ns)" << "," << "curr_pos_x" << "," << "curr_pos_y" << "," << "curr_pos_z" << "," << "novint_input_x" << "," << "novint_input_y" << "," << "novint_input_z" << "," 
             << "compute_input_x" << "," << "compute_input_y" << "," << "compute_input_z" << "," << "compute_control_x" << "," << "compute_control_y" << "," << "compute_control_z" << ","
@@ -94,7 +94,7 @@ public:
         force_log_file_ << "timestamp (ns)" << "," << "force_x" << "," << "force_y" << "," << "force_z" << std::endl;
 
         whiteboard_angle_log_file_.open("logs/main_node/whiteboard_angle.csv");
-        whiteboard_angle_log_file_ << "timestamp (ns)" << "," << "q_x" << "," << "q_y" << "," << "q_z" << "," << "q_w" << std::endl;
+        whiteboard_angle_log_file_ << "timestamp (ns)" << "," << "q_x" << "," << "q_y" << "," << "q_z" << "," << "q_w" << "," << "roll" << "," << "pitch" << "," << "yaw" << std::endl;
 
         perturb_log_file_.open("logs/main_node/perturb.csv");
         perturb_log_file_ << "timestamp (ns)" << "," << "p_delta_x" << "," << "p_delta_y" << "," << "p_delta_z" << "," << "p_min_x" << "," << "p_min_y" << "," << "p_min_z" << "," 
@@ -159,6 +159,8 @@ public:
 
         demo_object_pose_ = {0.f, 0.f, 0.f};
 
+
+        test_mem_leak = true;
 
         /* rectangle points
          *
@@ -265,6 +267,8 @@ private:
 
     std::array<fp32, 3> demo_object_pose_;
 
+    bool test_mem_leak;
+
     // PD controller.
     std::array<float, 3> compute_control(const std::array<float, 3> &setpoint, std::array<float, 3> currPos) {
         std::array<float, 3> error;
@@ -331,10 +335,12 @@ private:
 
     void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         // std::cout << msg->pose.orientation.x << "," << msg->pose.orientation.y << "," << msg->pose.orientation.z << "," << msg->pose.orientation.w << std::endl;
-        if (logging_) {
-            whiteboard_angle_log_file_ << std::chrono::system_clock::now().time_since_epoch().count() << "," << msg->pose.orientation.x << "," << msg->pose.orientation.y << "," << msg->pose.orientation.z << "," << msg->pose.orientation.w << std::endl;
+        if (test_mem_leak) {
+            std::cout << "test_mem_leak before change: " << test_mem_leak << std::endl;
+            std::cout << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
+            test_mem_leak = false;
+            std::cout << "test_mem_leak after change: " << test_mem_leak << std::endl;
         }
-
         tf2::Quaternion q(
                 msg->pose.orientation.x,
                 msg->pose.orientation.y,
@@ -488,6 +494,10 @@ random_geofencing_test(q);
         object_pos_or[3] = roll * 180.f / M_PI;
         object_pos_or[4] = pitch * 180.f / M_PI;
         object_pos_or[5] = yaw * 180.f / M_PI;
+
+        if (logging_) {
+            whiteboard_angle_log_file_ << std::chrono::system_clock::now().time_since_epoch().count() << "," << msg->pose.orientation.x << "," << msg->pose.orientation.y << "," << msg->pose.orientation.z << "," << msg->pose.orientation.w << "," << roll << "," << pitch << "," << yaw << std::endl;
+        }
     }
 
     void demo_object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
@@ -643,7 +653,6 @@ if (false) {
     void topic_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         // See readme.
         std::array<fp32, 3> novint_input = {msg->pose.position.x, msg->pose.position.y, msg->pose.position.z};
-        
         // std::cout << "----------------\nnovint_input: " << novint_input[0] << "," << novint_input[1] << "," << novint_input[2] << std::endl;
         // std::cout << std::chrono::system_clock::now().time_since_epoch().count() << std::endl;
         // std::cout << "-------------\nnovint_input_to_remote: " << -novint_input[2] << "," << -novint_input[0] << "," << novint_input[1] << std::endl;
@@ -692,7 +701,7 @@ if (false) {
 
         Eigen::Vector3f p_remote = {0.f, 0.f, 0.f};
         //0.0164752
-        get_new_point(p, 0.02, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote,
+        get_new_point(p, 0.02f, triangles, translation_operator, rotation_operator, translation_remote, rotation_remote,
                       p_remote, &perturb_log_file_);
 
         //Working in robot coordinates from here
@@ -737,6 +746,8 @@ if (false) {
         msg_send.curr_pos_z = curr_pos[2];
 
         publisher_->publish(msg_send);
+
+RCLCPP_INFO(this->get_logger(), "poses: %f, %f, %f", poses[0], poses[1], poses[2]);
 
         // Logging to csv.
         if (logging_) {

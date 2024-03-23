@@ -23,7 +23,7 @@ public:
         subscription_keyboard_ = this->create_subscription<std_msgs::msg::String>("/keyboard", 10, std::bind(
             &MessageDelayNode::keyboard_callback, this, std::placeholders::_1));
 
-        declare_parameter("delay", 10);
+        declare_parameter("delay", 0);
 
         get_parameter("delay", delay_);
         timer_ = this->create_wall_timer(1ms, std::bind(&MessageDelayNode::timer_callback, this));

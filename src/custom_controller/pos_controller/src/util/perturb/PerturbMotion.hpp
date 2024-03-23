@@ -199,14 +199,14 @@ void perturb_motion(const Eigen::Vector3f &p, const Eigen::Vector3f &closest_poi
     Eigen::Vector3f p_delta = closest_point_remote - closest_point;
     Eigen::Vector3f p_min = p - closest_point;
 
-    std::cout << "---------------------\nclosest_point_remote: " << closest_point_remote << std::endl;
-    std::cout << "p: " << p << std::endl;
+
 
     if (p_delta.norm() == 0.0f) {
         perturbed_point = p;
         return;
     }
     float ratio;
+    // ratio = 1.f;
     if (p_min.norm() < 0.02) { //tiny "deadzone" to avoid jitter
         ratio = 1.0;
     } else if ( (p_min.norm() - 0.02) < (p_delta.norm() * (3.0f / 2.0f))) {
@@ -214,6 +214,10 @@ void perturb_motion(const Eigen::Vector3f &p, const Eigen::Vector3f &closest_poi
     } else {
         ratio = 0.0f;
     }
+        
+    // std::cout << "---------------------\nclosest_point_remote: " << closest_point_remote << std::endl;
+    // std::cout << "p: " << p << std::endl;
+    // std::cout << "ratio: " << ratio << std::endl;
 
     *perturb_log_file_ << std::chrono::system_clock::now().time_since_epoch().count() << "," << p_delta[0] << "," << p_delta[1] << "," << p_delta[2] << "," << p_min[0] << "," << p_min[1] << "," << p_min[2]
         << "," << closest_point[0] << "," << closest_point[1] << "," << closest_point[2] << "," << closest_point_remote[0] << "," << closest_point_remote[1] << "," << closest_point_remote[2] << std::endl;

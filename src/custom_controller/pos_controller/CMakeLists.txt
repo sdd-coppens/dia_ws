@@ -59,18 +59,21 @@ ament_target_dependencies(udp_whiteboard_communicator rclcpp xarm_sdk std_msgs g
 add_executable(delay_whiteboard_messages src/delay_whiteboard_messages.cpp)
 ament_target_dependencies(delay_whiteboard_messages rclcpp geometry_msgs std_msgs)
 
-
 add_executable(0testing src/0testing.cpp)
 ament_target_dependencies(0testing rclcpp geometry_msgs std_msgs)
-
-
-
 
 add_executable(impulse_testing src/impulse_testing.cpp)
 ament_target_dependencies(impulse_testing rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs tf2 tf2_ros)
 
 add_executable(moment_testing src/moment_testing.cpp)
 ament_target_dependencies(moment_testing rclcpp custom_controller_interfaces std_msgs xarm_sdk xarm_msgs tf2 tf2_ros)
+
+
+add_executable(refactor_novint src/refactor_novint.cpp)
+ament_target_dependencies(refactor_novint rclcpp xarm_sdk std_msgs geometry_msgs tf2 tf2_ros)
+
+add_executable(generate_whiteboard_angles src/generate_whiteboard_angles.cpp)
+ament_target_dependencies(generate_whiteboard_angles rclcpp xarm_sdk std_msgs geometry_msgs tf2 tf2_ros)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -91,6 +94,8 @@ install(TARGETS
   impulse_testing
   moment_testing
   0testing
+  refactor_novint
+  generate_whiteboard_angles
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -109,6 +114,9 @@ endif()
 ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/fk_vector_predict.py
+  scripts/serial_node.py
+  scripts/ski_fk.py
+  scripts/ski_fk_two.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

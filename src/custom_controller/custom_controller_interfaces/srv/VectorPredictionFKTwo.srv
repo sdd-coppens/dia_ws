@@ -1,0 +1,10 @@
+uint16 pos_a
+uint16 pos_b
+uint16 pos_c
+uint16 pos_x_axis
+---
+float32 qx
+float32 qy
+float32 qz
+float32 qw
+uint16 pos_x_axis
