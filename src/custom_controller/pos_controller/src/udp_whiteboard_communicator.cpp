@@ -211,14 +211,8 @@ private:
                 auto time_stamp_cpp = std::chrono::system_clock::now();
                 log_fk_ << time_stamp_cpp.time_since_epoch().count() << "," << averaged_fk_msg.pose.orientation.x << "," << averaged_fk_msg.pose.orientation.y << "," << averaged_fk_msg.pose.orientation.z << "," << averaged_fk_msg.pose.orientation.w << std::endl;
             }
-            // if (send_whiteboard_information_) {
-                // if (check_delay_node_running()) {
-                    // object_pose_publisher_delayed_->publish(msg);
-                    object_pose_publisher_delayed_->publish(averaged_fk_msg);
-                // } else {
-                    // object_pose_publisher_->publish(msg);
-                // }
-            // }
+            object_pose_publisher_delayed_->publish(averaged_fk_msg);
+            // object_pose_publisher_delayed_->publish(msg);
         }
     }
 

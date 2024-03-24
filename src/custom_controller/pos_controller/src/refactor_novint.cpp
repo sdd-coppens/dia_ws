@@ -44,9 +44,17 @@ public:
         first_novint_callback_ = true;
         sync_bool_ = false;
         use_perturb_ = false;
-        demo_object_pose_ = {0.f, 0.f, 0.f};
+        demo_object_pose_ = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
         prev_error_ = {0.f, 0.f, 0.f};
         object_pos_or_ = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+        object_pos_quat_ = tf2::Quaternion(0.f, 0.f, 0.f, 1.f);
+        whiteboard_l_ = 0.935f;
+        whiteboard_w_ = 0.705f;
+        whiteboard_h_ = 0.03f;
+        whiteboard_corners_[0] = {whiteboard_l_, whiteboard_h_, -whiteboard_w_};
+        whiteboard_corners_[1] = {whiteboard_l_, whiteboard_h_, whiteboard_w_};
+        whiteboard_corners_[2] = {-whiteboard_l_, whiteboard_h_, whiteboard_w_};
+        whiteboard_corners_[3] = {-whiteboard_l_, whiteboard_h_, -whiteboard_w_};
 
         // Set up arm.
         std::string port = "192.168.1.171";
@@ -92,7 +100,13 @@ private:
 
     // Environment variables.
     std::array<fp32, 6> object_pos_or_;
-    std::array<fp32, 3> demo_object_pose_;
+    std::array<fp32, 6> demo_object_pose_;
+    tf2::Quaternion object_pos_quat_;
+    // Whiteboard geofencing.
+    fp32 whiteboard_l_;
+    fp32 whiteboard_w_;
+    fp32 whiteboard_h_;
+    std::array<tf2::Vector3, 4> whiteboard_corners_;
 
     // Warping stuff.
     bool use_perturb_;
@@ -101,6 +115,8 @@ private:
     //Make get the 12 triangles of a 1x1x1 cube
     Eigen::Matrix3f cube_triangles[12];
     std::vector <Eigen::Matrix3f> triangles;
+
+
 
 
     // Enables motion on robot and puts it in correct mode.
@@ -261,6 +277,61 @@ private:
         }
     }
 
+    bool check_if_geofencing(std::array<fp32, 3> novint_input) {
+        // Check if the input is within the whiteboard boundaries. If not bound z.
+        std::array<tf2::Vector3, 4> whiteboard_corners_rotated_;
+        whiteboard_corners_rotated_[0] = tf2::quatRotate(object_pos_quat_, whiteboard_corners_[0]);
+        whiteboard_corners_rotated_[1] = tf2::quatRotate(object_pos_quat_, whiteboard_corners_[1]);
+        whiteboard_corners_rotated_[2] = tf2::quatRotate(object_pos_quat_, whiteboard_corners_[2]);
+        whiteboard_corners_rotated_[3] = tf2::quatRotate(object_pos_quat_, whiteboard_corners_[3]);
+
+        // D = (x2 - x1) * (yp - y1) - (xp - x1) * (y2 - y1)
+        // If D > 0, the point is on the left-hand side. If D < 0, the point is on the right-hand side. If D = 0, the point is on the line.
+        // source: https://stackoverflow.com/questions/2752725/finding-whether-a-point-lies-inside-a-rectangle-or-not
+
+        // Line corner0 - corner1.
+        fp32 d_corner0_corner1 = (whiteboard_corners_rotated_[1][0] - whiteboard_corners_rotated_[0][0]) *
+                                 (novint_input[2] - whiteboard_corners_rotated_[0][2])
+                                 - (novint_input[0] - whiteboard_corners_rotated_[0][0]) *
+                                   (whiteboard_corners_rotated_[1][2] - whiteboard_corners_rotated_[0][2]);
+        // Line corner1 - corner2.
+        fp32 d_corner1_corner2 = (whiteboard_corners_rotated_[2][0] - whiteboard_corners_rotated_[1][0]) *
+                                 (novint_input[2] - whiteboard_corners_rotated_[1][2])
+                                 - (novint_input[0] - whiteboard_corners_rotated_[1][0]) *
+                                   (whiteboard_corners_rotated_[2][2] - whiteboard_corners_rotated_[1][2]);
+        // Line corner2 - corner3.
+        fp32 d_corner2_corner3 = (whiteboard_corners_rotated_[3][0] - whiteboard_corners_rotated_[2][0]) *
+                                 (novint_input[2] - whiteboard_corners_rotated_[2][2])
+                                 - (novint_input[0] - whiteboard_corners_rotated_[2][0]) *
+                                   (whiteboard_corners_rotated_[3][2] - whiteboard_corners_rotated_[2][2]);
+        // Line corner3 - corner0.
+        fp32 d_corner3_corner0 = (whiteboard_corners_rotated_[0][0] - whiteboard_corners_rotated_[3][0]) *
+                                 (novint_input[2] - whiteboard_corners_rotated_[3][2])
+                                 - (novint_input[0] - whiteboard_corners_rotated_[3][0]) *
+                                   (whiteboard_corners_rotated_[0][2] - whiteboard_corners_rotated_[3][2]);
+
+        if (false) {
+            std::cout << "---------------------------" << std::endl;
+            // std::cout << "q: " << object_pos_quat_.getX() << ", " << object_pos_quat_.getY() << ", " << object_pos_quat_.getZ() << ", " << object_pos_quat_.getW() << std::endl;
+            std::cout << "novint: " << novint_input[0] << ", " << novint_input[1] << ", " << novint_input[2] << std::endl;
+            std::cout << "corner 0:     " << whiteboard_corners_[0][0] << ", " << whiteboard_corners_[0][2] << std::endl;
+            std::cout << "corner 0 rot: " << whiteboard_corners_rotated_[0][0] << ", " << whiteboard_corners_rotated_[0][2] << std::endl;
+            std::cout << "corner 1:     " << whiteboard_corners_[1][0] << ", " << whiteboard_corners_[1][2] << std::endl;
+            std::cout << "corner 1 rot: " << whiteboard_corners_rotated_[1][0] << ", " << whiteboard_corners_rotated_[1][2] << std::endl;
+            std::cout << "corner 2:     " << whiteboard_corners_[2][0] << ", " << whiteboard_corners_[2][2] << std::endl;
+            std::cout << "corner 2 rot: " << whiteboard_corners_rotated_[2][0] << ", " << whiteboard_corners_rotated_[2][2] << std::endl;
+            std::cout << "corner 3:     " << whiteboard_corners_[3][0] << ", " << whiteboard_corners_[3][2] << std::endl;
+            std::cout << "corner 3 rot: " << whiteboard_corners_rotated_[3][0] << ", " << whiteboard_corners_rotated_[3][2] << std::endl;
+        }
+
+        if (d_corner0_corner1 >= 0.f && d_corner1_corner2 >= 0.f && d_corner2_corner3 >= 0.f && d_corner3_corner0 >= 0.f) {
+            RCLCPP_INFO(this->get_logger(), "inside  board\n");
+        } else {
+            RCLCPP_INFO(this->get_logger(), "outside board\n");
+        }
+        return false;
+    }
+
     void object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
         object_pos_or_[0] = msg->pose.position.x;
         object_pos_or_[1] = msg->pose.position.y;
@@ -273,6 +344,10 @@ private:
                 msg->pose.orientation.z,
                 msg->pose.orientation.w);
 
+        object_pos_quat_ = q;
+        // std::cout << "q og: " << q.getX() << ", " << q.getY() << ", " << q.getZ() << ", " << q.getW() << std::endl;
+        // std::cout << "q:    " << object_pos_quat_.getX() << ", " << object_pos_quat_.getY() << ", " << object_pos_quat_.getZ() << ", " << object_pos_quat_.getW() << std::endl;
+
         tf2::Matrix3x3 m(q);
         double roll, pitch, yaw;
         m.getRPY(roll, pitch, yaw);
@@ -280,6 +355,8 @@ private:
         object_pos_or_[3] = roll * 180.f / M_PI;
         object_pos_or_[4] = pitch * 180.f / M_PI;
         object_pos_or_[5] = yaw * 180.f / M_PI;
+
+        // std::cout << "rpy:  " << object_pos_or_[3] << ", " << object_pos_or_[4] << ", " << object_pos_or_[5] << std::endl;
     }
 
     void demo_object_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
@@ -304,11 +381,16 @@ private:
     }
 
     void proxy_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+        // std::cout << "q ca: " << object_pos_quat_.getX() << ", " << object_pos_quat_.getY() << ", " << object_pos_quat_.getZ() << ", " << object_pos_quat_.getW() << std::endl;
+        //    std::cout << "rpy:  " << object_pos_or_[3] << ", " << object_pos_or_[4] << ", " << object_pos_or_[5] << std::endl;
         if (!sync_bool_) {
             // If here the system hasn't fully finished setting up.
-            return;
+            // return;
         }
         std::array<fp32, 3> novint_input = {msg->pose.position.x, msg->pose.position.y, msg->pose.position.z};
+        
+        check_if_geofencing(novint_input);
+
         // Moves robot to initial position in positioning mode so it doesn't overspeed itself.
         if (first_novint_callback_) {
             arm->set_mode(0);
@@ -360,7 +442,7 @@ private:
         int ret = arm->set_servo_cartesian(poses, 1);
         sleep_milliseconds(4);
         if (ret != 0 && ret != 1) {
-            RCLCPP_INFO(this->get_logger(), "set_servo_cartesian, ret=%d\n", ret);
+            // RCLCPP_INFO(this->get_logger(), "set_servo_cartesian, ret=%d\n", ret);
         }
     }
 

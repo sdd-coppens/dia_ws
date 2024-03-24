@@ -45,10 +45,10 @@ def generate_launch_description():
         #     namespace="pos_controller5",
         #     executable="refactor_novint",
         #     name="refactor_novint"
-        # )
+        # ),
         Node(
             package="pos_controller",
-            namespace="pos_controller5",
+            namespace="pos_controller6",
             executable="ski_fk_two.py",
             name="ski_fk_two"
         )
